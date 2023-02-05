@@ -77,7 +77,7 @@ impl Certificate {
         }
 
         let keypair = rcgen::KeyPair::from_der(&pems[0].contents)
-            .map_err(|e| Error::InvalidPEM(format!("can't decode keypair: {}", e)))?;
+            .map_err(|e| Error::InvalidPEM(format!("can't decode keypair: {e}")))?;
 
         let mut rustls_certs = Vec::new();
         for p in pems.drain(1..) {
@@ -517,6 +517,7 @@ pub(crate) fn generate_aead_additional_data(h: &RecordLayerHeader, payload_len: 
 
 #[cfg(test)]
 mod test {
+    #[cfg(feature = "pem")]
     use super::*;
 
     #[cfg(feature = "pem")]

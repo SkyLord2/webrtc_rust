@@ -77,10 +77,10 @@ impl From<CandidateType> for RTCIceCandidateType {
 impl fmt::Display for RTCIceCandidateType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            RTCIceCandidateType::Host => write!(f, "{}", ICE_CANDIDATE_TYPE_HOST_STR),
-            RTCIceCandidateType::Srflx => write!(f, "{}", ICE_CANDIDATE_TYPE_SRFLX_STR),
-            RTCIceCandidateType::Prflx => write!(f, "{}", ICE_CANDIDATE_TYPE_PRFLX_STR),
-            RTCIceCandidateType::Relay => write!(f, "{}", ICE_CANDIDATE_TYPE_RELAY_STR),
+            RTCIceCandidateType::Host => write!(f, "{ICE_CANDIDATE_TYPE_HOST_STR}"),
+            RTCIceCandidateType::Srflx => write!(f, "{ICE_CANDIDATE_TYPE_SRFLX_STR}"),
+            RTCIceCandidateType::Prflx => write!(f, "{ICE_CANDIDATE_TYPE_PRFLX_STR}"),
+            RTCIceCandidateType::Relay => write!(f, "{ICE_CANDIDATE_TYPE_RELAY_STR}"),
             _ => write!(f, "{}", crate::UNSPECIFIED_STR),
         }
     }
@@ -102,7 +102,7 @@ mod test {
 
         for (type_string, expected_type) in tests {
             let actual = RTCIceCandidateType::from(type_string);
-            assert_eq!(expected_type, actual);
+            assert_eq!(actual, expected_type);
         }
     }
 
@@ -117,7 +117,7 @@ mod test {
         ];
 
         for (ctype, expected_string) in tests {
-            assert_eq!(expected_string, ctype.to_string());
+            assert_eq!(ctype.to_string(), expected_string);
         }
     }
 }

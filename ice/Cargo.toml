@@ -2,7 +2,7 @@
 name = "webrtc-ice"
 version = "0.9.0"
 authors = ["Rain Liu <yliu@webrtc.rs>"]
-edition = "2018"
+edition = "2021"
 description = "A pure Rust implementation of ICE"
 license = "MIT/Apache-2.0"
 documentation = "https://docs.rs/webrtc-ice"
@@ -35,12 +35,12 @@ waitgroup = "0.1.2"
 tokio-test = "0.4.0" # must match the min version of the `tokio` crate above
 regex = "1"
 env_logger = "0.9.0"
-chrono = "0.4.19"
+chrono = "0.4.23"
 ipnet = "2.5.0"
 clap = "3.2.6"
 lazy_static = "1.4.0"
 hyper = { version = "0.14.19", features = ["full"] }
-sha-1 = "0.10.0"
+sha1 = "0.10.5"
 
 [[example]]
 name = "ping_pong"

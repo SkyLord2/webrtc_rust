@@ -210,7 +210,7 @@ mod test {
         let result = unmarshal(&mut Bytes::new());
         if let Err(got) = result {
             let want = Error::InvalidHeader;
-            assert_eq!(want, got, "Unmarshal(nil) err = {}, want {}", got, want);
+            assert_eq!(got, want, "Unmarshal(nil) err = {got}, want {want}");
         } else {
             panic!("want error");
         }
@@ -230,9 +230,8 @@ mod test {
         if let Err(got) = result {
             let want = Error::PacketTooShort;
             assert_eq!(
-                want, got,
-                "Unmarshal(invalid_header_length) err = {}, want {}",
-                got, want
+                got, want,
+                "Unmarshal(invalid_header_length) err = {got}, want {want}"
             );
         } else {
             panic!("want error");

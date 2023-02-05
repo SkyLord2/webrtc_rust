@@ -41,8 +41,8 @@ impl From<&str> for RTCIceProtocol {
 impl fmt::Display for RTCIceProtocol {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            RTCIceProtocol::Udp => write!(f, "{}", ICE_PROTOCOL_UDP_STR),
-            RTCIceProtocol::Tcp => write!(f, "{}", ICE_PROTOCOL_TCP_STR),
+            RTCIceProtocol::Udp => write!(f, "{ICE_PROTOCOL_UDP_STR}"),
+            RTCIceProtocol::Tcp => write!(f, "{ICE_PROTOCOL_TCP_STR}"),
             _ => write!(f, "{}", crate::UNSPECIFIED_STR),
         }
     }
@@ -64,7 +64,7 @@ mod test {
 
         for (proto_string, expected_proto) in tests {
             let actual = RTCIceProtocol::from(proto_string);
-            assert_eq!(expected_proto, actual);
+            assert_eq!(actual, expected_proto);
         }
     }
 
@@ -77,7 +77,7 @@ mod test {
         ];
 
         for (proto, expected_string) in tests {
-            assert_eq!(expected_string, proto.to_string());
+            assert_eq!(proto.to_string(), expected_string);
         }
     }
 }

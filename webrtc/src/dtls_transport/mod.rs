@@ -547,7 +547,7 @@ impl RTCDtlsTransport {
             let mut h = Sha256::new();
             h.update(remote_cert);
             let hashed = h.finalize();
-            let values: Vec<String> = hashed.iter().map(|x| format! {"{:02x}", x}).collect();
+            let values: Vec<String> = hashed.iter().map(|x| format! {"{x:02x}"}).collect();
             let remote_value = values.join(":").to_lowercase();
 
             if remote_value == fp.value.to_lowercase() {
@@ -582,10 +582,10 @@ impl RTCDtlsTransport {
         stream_info: &StreamInfo,
         interceptor: &Arc<dyn Interceptor + Send + Sync>,
     ) -> Result<(
-        Option<Arc<srtp::stream::Stream>>,
-        Option<Arc<dyn RTPReader + Send + Sync>>,
-        Option<Arc<srtp::stream::Stream>>,
-        Option<Arc<dyn RTCPReader + Send + Sync>>,
+        Arc<srtp::stream::Stream>,
+        Arc<dyn RTPReader + Send + Sync>,
+        Arc<srtp::stream::Stream>,
+        Arc<dyn RTCPReader + Send + Sync>,
     )> {
         let srtp_session = self
             .get_srtp_session()
@@ -608,10 +608,10 @@ impl RTCDtlsTransport {
         let rtcp_interceptor = interceptor.bind_rtcp_reader(rtcp_stream_reader).await;
 
         Ok((
-            Some(rtp_read_stream),
-            Some(rtp_interceptor),
-            Some(rtcp_read_stream),
-            Some(rtcp_interceptor),
+            rtp_read_stream,
+            rtp_interceptor,
+            rtcp_read_stream,
+            rtcp_interceptor,
         ))
     }
 }

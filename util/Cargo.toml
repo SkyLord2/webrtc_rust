@@ -2,7 +2,7 @@
 name = "webrtc-util"
 version = "0.7.0"
 authors = ["Rain Liu <yliu@webrtc.rs>"]
-edition = "2018"
+edition = "2021"
 description = "Utilities for WebRTC.rs stack"
 license = "MIT/Apache-2.0"
 documentation = "https://docs.rs/webrtc-util"
@@ -51,7 +51,7 @@ cc = "1.0.73"
 [dev-dependencies]
 tokio-test = "0.4.0" # must match the min version of the `tokio` crate above
 env_logger = "0.9.0"
-chrono = "0.4.19"
+chrono = "0.4.23"
 criterion = { version = "0.3.5", features = ["stable"]}
 async-global-executor = "2.3.1"
 

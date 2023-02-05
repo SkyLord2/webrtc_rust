@@ -172,10 +172,8 @@ fn test_marshal() -> Result<()> {
 
     let actual = sd.marshal();
     assert!(
-        &actual == CANONICAL_MARSHAL_SDP,
-        "error:\n\nEXPECTED:\n{}\nACTUAL:\n{}!!!!\n",
-        CANONICAL_MARSHAL_SDP,
-        actual
+        actual == CANONICAL_MARSHAL_SDP,
+        "error:\n\nEXPECTED:\n{CANONICAL_MARSHAL_SDP}\nACTUAL:\n{actual}!!!!\n"
     );
 
     Ok(())
@@ -537,12 +535,12 @@ fn test_round_trip() -> Result<()> {
         if let Ok(sdp) = sdp {
             let actual = sdp.marshal();
             if let Some(expected) = expected {
-                assert_eq!(actual.as_str(), expected, "{}\n{}", name, sdp_str);
+                assert_eq!(actual.as_str(), expected, "{name}\n{sdp_str}");
             } else {
-                assert_eq!(actual.as_str(), sdp_str, "{}\n{}", name, sdp_str);
+                assert_eq!(actual.as_str(), sdp_str, "{name}\n{sdp_str}");
             }
         } else {
-            assert!(false, "{}\n{}", name, sdp_str);
+            panic!("{name}\n{sdp_str}");
         }
     }
 
@@ -588,7 +586,7 @@ fn test_unmarshal_non_nil_address() -> Result<()> {
         let output = sdp.marshal();
         assert_eq!(output.as_str(), input);
     } else {
-        assert!(false, "{}", input);
+        panic!("{}", input);
     }
     Ok(())
 }

@@ -2,7 +2,7 @@
 name = "webrtc-sctp"
 version = "0.7.0"
 authors = ["Rain Liu <yliu@webrtc.rs>"]
-edition = "2018"
+edition = "2021"
 description = "A pure Rust implementation of SCTP"
 license = "MIT/Apache-2.0"
 documentation = "https://docs.rs/webrtc-sctp"
@@ -28,7 +28,7 @@ thiserror = "1.0"
 tokio-test = "0.4.0" # must match the min version of the `tokio` crate above
 lazy_static = "1.4.0"
 env_logger = "0.9.0"
-chrono = "0.4.19"
+chrono = "0.4.23"
 clap = "3.2.6"
 
 [[example]]

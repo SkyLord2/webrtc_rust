@@ -190,7 +190,7 @@ mod test {
             let join = |parts: &[&[u16]]| -> Vec<u16> {
                 let mut result = vec![];
                 for p in parts {
-                    result.extend_from_slice(*p);
+                    result.extend_from_slice(p);
                 }
                 result
             };
@@ -205,7 +205,7 @@ mod test {
             let assert_get = |rl: &GeneratorStreamInternal, nums: &[u16]| {
                 for n in nums {
                     let seq = start.wrapping_add(*n);
-                    assert!(rl.get(seq), "not found: {}", seq);
+                    assert!(rl.get(seq), "not found: {seq}");
                 }
             };
 

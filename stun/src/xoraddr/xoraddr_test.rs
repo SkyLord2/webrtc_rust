@@ -72,7 +72,7 @@ fn test_xormapped_address_get_from() -> Result<()> {
                 err
             );
         } else {
-            assert!(false, "expected error, got ok");
+            panic!("expected error, got ok");
         }
     }
     //"AttrOverflowErr"
@@ -91,11 +91,10 @@ fn test_xormapped_address_get_from() -> Result<()> {
         if let Err(err) = result {
             assert!(
                 is_attr_size_overflow(&err),
-                "AddTo should return AttrOverflowErr, got: {}",
-                err
+                "AddTo should return AttrOverflowErr, got: {err}"
             );
         } else {
-            assert!(false, "expected error, got ok");
+            panic!("expected error, got ok");
         }
     }
 
@@ -240,9 +239,7 @@ fn test_xormapped_address_string() -> Result<()> {
         assert_eq!(
             addr.to_string(),
             ip,
-            " XORMappesAddres.String() {} (got) != {} (expected)",
-            addr,
-            ip,
+            " XORMappesAddres.String() {addr} (got) != {ip} (expected)",
         );
     }
 

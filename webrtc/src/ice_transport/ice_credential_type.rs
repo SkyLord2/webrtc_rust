@@ -38,8 +38,8 @@ impl From<&str> for RTCIceCredentialType {
 impl fmt::Display for RTCIceCredentialType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            RTCIceCredentialType::Password => write!(f, "{}", ICE_CREDENTIAL_TYPE_PASSWORD_STR),
-            RTCIceCredentialType::Oauth => write!(f, "{}", ICE_CREDENTIAL_TYPE_OAUTH_STR),
+            RTCIceCredentialType::Password => write!(f, "{ICE_CREDENTIAL_TYPE_PASSWORD_STR}"),
+            RTCIceCredentialType::Oauth => write!(f, "{ICE_CREDENTIAL_TYPE_OAUTH_STR}"),
             _ => write!(f, "{}", crate::UNSPECIFIED_STR),
         }
     }
@@ -58,7 +58,7 @@ mod test {
         ];
 
         for (ct_str, expected_ct) in tests {
-            assert_eq!(expected_ct, RTCIceCredentialType::from(ct_str));
+            assert_eq!(RTCIceCredentialType::from(ct_str), expected_ct);
         }
     }
 
@@ -71,7 +71,7 @@ mod test {
         ];
 
         for (ct, expected_string) in tests {
-            assert_eq!(expected_string, ct.to_string());
+            assert_eq!(ct.to_string(), expected_string);
         }
     }
 }

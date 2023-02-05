@@ -44,10 +44,10 @@ impl From<&str> for RTCIceGatheringState {
 impl fmt::Display for RTCIceGatheringState {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            RTCIceGatheringState::New => write!(f, "{}", ICE_GATHERING_STATE_NEW_STR),
-            RTCIceGatheringState::Gathering => write!(f, "{}", ICE_GATHERING_STATE_GATHERING_STR),
+            RTCIceGatheringState::New => write!(f, "{ICE_GATHERING_STATE_NEW_STR}"),
+            RTCIceGatheringState::Gathering => write!(f, "{ICE_GATHERING_STATE_GATHERING_STR}"),
             RTCIceGatheringState::Complete => {
-                write!(f, "{}", ICE_GATHERING_STATE_COMPLETE_STR)
+                write!(f, "{ICE_GATHERING_STATE_COMPLETE_STR}")
             }
             _ => write!(f, "{}", crate::UNSPECIFIED_STR),
         }
@@ -68,7 +68,7 @@ mod test {
         ];
 
         for (state_string, expected_state) in tests {
-            assert_eq!(expected_state, RTCIceGatheringState::from(state_string));
+            assert_eq!(RTCIceGatheringState::from(state_string), expected_state);
         }
     }
 
@@ -82,7 +82,7 @@ mod test {
         ];
 
         for (state, expected_string) in tests {
-            assert_eq!(expected_string, state.to_string());
+            assert_eq!(state.to_string(), expected_string);
         }
     }
 }

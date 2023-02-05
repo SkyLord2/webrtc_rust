@@ -47,7 +47,7 @@ impl fmt::Display for RTCRtcpMuxPolicy {
             RTCRtcpMuxPolicy::Require => RTCP_MUX_POLICY_REQUIRE_STR,
             RTCRtcpMuxPolicy::Unspecified => crate::UNSPECIFIED_STR,
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -64,7 +64,7 @@ mod test {
         ];
 
         for (policy_string, expected_policy) in tests {
-            assert_eq!(expected_policy, RTCRtcpMuxPolicy::from(policy_string));
+            assert_eq!(RTCRtcpMuxPolicy::from(policy_string), expected_policy);
         }
     }
 
@@ -77,7 +77,7 @@ mod test {
         ];
 
         for (policy, expected_string) in tests {
-            assert_eq!(expected_string, policy.to_string());
+            assert_eq!(policy.to_string(), expected_string);
         }
     }
 }

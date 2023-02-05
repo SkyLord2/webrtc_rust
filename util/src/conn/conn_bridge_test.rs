@@ -6,8 +6,8 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 
-const MSG1: Bytes = Bytes::from_static(b"ADC");
-const MSG2: Bytes = Bytes::from_static(b"DEFG");
+static MSG1: Bytes = Bytes::from_static(b"ADC");
+static MSG2: Bytes = Bytes::from_static(b"DEFG");
 
 #[tokio::test]
 async fn test_bridge_normal() -> Result<()> {
@@ -206,8 +206,8 @@ async fn test_bridge_reorder_packets_from_conn1() -> Result<()> {
 #[tokio::test]
 async fn test_bridge_inverse_error() -> Result<()> {
     let mut q = VecDeque::new();
-    q.push_back(MSG1);
-    assert_eq!(inverse(&mut q), false);
+    q.push_back(MSG1.clone());
+    assert!(!inverse(&mut q));
     Ok(())
 }
 
@@ -234,9 +234,9 @@ async fn test_bridge_drop_next_n_packets() -> Result<()> {
 
         let mut msgs = vec![];
         for i in 0..5u8 {
-            let msg = format!("msg{}", i);
+            let msg = format!("msg{i}");
             let n = src_conn.send(msg.as_bytes()).await?;
-            assert_eq!(n, msg.len(), "[{}] unexpected length", id);
+            assert_eq!(n, msg.len(), "[{id}] unexpected length");
             msgs.push(msg);
             br.process().await;
         }
@@ -245,7 +245,7 @@ async fn test_bridge_drop_next_n_packets() -> Result<()> {
             if let Some(buf) = rx.recv().await {
                 assert_eq!(msgs[i + 3].as_bytes(), &buf);
             } else {
-                assert!(false, "{} unexpected number of packets", id);
+                panic!("{id} unexpected number of packets");
             }
         }
     }
