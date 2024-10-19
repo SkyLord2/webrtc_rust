@@ -1,12 +1,13 @@
 #[cfg(test)]
 mod h264_writer_test;
 
-use crate::error::Result;
-use crate::io::Writer;
+use std::io::{Seek, Write};
 
 use rtp::codecs::h264::H264Packet;
 use rtp::packetizer::Depacketizer;
-use std::io::{Seek, Write};
+
+use crate::error::Result;
+use crate::io::Writer;
 
 const NALU_TTYPE_STAP_A: u32 = 24;
 const NALU_TTYPE_SPS: u32 = 7;
@@ -27,7 +28,7 @@ fn is_key_frame(data: &[u8]) -> bool {
 /// write the data to an io.Writer.
 /// Currently it only supports non-interleaved mode
 /// Therefore, only 1-23, 24 (STAP-A), 28 (FU-A) NAL types are allowed.
-/// https://tools.ietf.org/html/rfc6184#section-5.2
+/// <https://tools.ietf.org/html/rfc6184#section-5.2>
 pub struct H264Writer<W: Write + Seek> {
     writer: W,
     has_key_frame: bool,

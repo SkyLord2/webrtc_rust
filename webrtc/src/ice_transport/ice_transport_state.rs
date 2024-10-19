@@ -1,9 +1,19 @@
-use ice::state::ConnectionState;
 use std::fmt;
 
+use ice::state::ConnectionState;
+
 /// ICETransportState represents the current state of the ICE transport.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCIceTransport/state
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dom-rtcicetransportstate
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTCIceTransportState {
+    #[default]
     Unspecified,
 
     /// ICETransportStateNew indicates the ICETransport is waiting
@@ -41,12 +51,6 @@ pub enum RTCIceTransportState {
     /// ICETransportStateClosed indicates the ICETransport has shut down
     /// and is no longer responding to STUN requests.
     Closed,
-}
-
-impl Default for RTCIceTransportState {
-    fn default() -> Self {
-        RTCIceTransportState::Unspecified
-    }
 }
 
 const ICE_TRANSPORT_STATE_NEW_STR: &str = "new";

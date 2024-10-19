@@ -1,6 +1,18 @@
 #[cfg(test)]
 mod net_test;
 
+use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
+use std::str::FromStr;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
+use async_trait::async_trait;
+use ipnet::IpNet;
+use portable_atomic::AtomicU64;
+use tokio::net::UdpSocket;
+use tokio::sync::Mutex;
+
 use super::conn_map::*;
 use super::interface::*;
 use crate::error::*;
@@ -8,16 +20,6 @@ use crate::vnet::chunk::Chunk;
 use crate::vnet::conn::{ConnObserver, UdpConn};
 use crate::vnet::router::*;
 use crate::{conn, ifaces, Conn};
-
-use async_trait::async_trait;
-use ipnet::IpNet;
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
-use std::str::FromStr;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-use tokio::net::UdpSocket;
-use tokio::sync::Mutex;
 
 pub(crate) const LO0_STR: &str = "lo0";
 pub(crate) const UDP_STR: &str = "udp";
@@ -393,7 +395,7 @@ pub struct NetConfig {
     pub static_ip: String,
 }
 
-// Net represents a local network stack euivalent to a set of layers from NIC
+// Net represents a local network stack equivalent to a set of layers from NIC
 // up to the transport (UDP / TCP) layer.
 pub enum Net {
     VNet(Arc<Mutex<VNet>>),
@@ -443,10 +445,7 @@ impl Net {
 
             Net::VNet(Arc::new(Mutex::new(vnet)))
         } else {
-            let interfaces = match ifaces::ifaces() {
-                Ok(ifs) => ifs,
-                Err(_) => vec![],
-            };
+            let interfaces = ifaces::ifaces().unwrap_or_default();
 
             let mut m: HashMap<String, Vec<IpNet>> = HashMap::new();
             for iface in interfaces {

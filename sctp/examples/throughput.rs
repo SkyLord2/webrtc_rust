@@ -1,8 +1,10 @@
-use clap::{App, AppSettings, Arg};
 use std::io::Write;
 use std::sync::Arc;
+
+use clap::{App, AppSettings, Arg};
 use tokio::net::UdpSocket;
-use util::{conn::conn_disconnected_packet::DisconnectedPacketConn, Conn};
+use util::conn::conn_disconnected_packet::DisconnectedPacketConn;
+use util::Conn;
 use webrtc_sctp::association::*;
 use webrtc_sctp::chunk::chunk_payload_data::PayloadProtocolIdentifier;
 use webrtc_sctp::stream::*;
@@ -73,7 +75,7 @@ fn main() -> Result<(), Error> {
                 let stream = a.accept_stream().await.unwrap();
                 println!("accepted a stream");
 
-                // set unordered = true and 10ms treshold for dropping packets
+                // set unordered = true and 10ms threshold for dropping packets
                 stream.set_reliability_params(true, ReliabilityType::Rexmit, 0);
 
                 let mut buff = [0u8; 65535];

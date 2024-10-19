@@ -1,3 +1,9 @@
+use std::collections::HashMap;
+use std::fmt;
+use std::sync::Arc;
+
+use log::*;
+
 use crate::cipher_suite::*;
 use crate::config::*;
 use crate::conn::*;
@@ -7,10 +13,9 @@ use crate::error::*;
 use crate::extension::extension_use_srtp::*;
 use crate::signature_hash_algorithm::*;
 
-use log::*;
-use std::collections::HashMap;
-use std::fmt;
-use std::sync::Arc;
+use rustls::client::danger::ServerCertVerifier;
+use rustls::pki_types::CertificateDer;
+use rustls::server::danger::ClientCertVerifier;
 
 //use std::io::BufWriter;
 
@@ -71,7 +76,7 @@ impl fmt::Display for HandshakeState {
 }
 
 pub(crate) type VerifyPeerCertificateFn =
-    Arc<dyn (Fn(&[Vec<u8>], &[rustls::Certificate]) -> Result<()>) + Send + Sync>;
+    Arc<dyn (Fn(&[Vec<u8>], &[CertificateDer<'static>]) -> Result<()>) + Send + Sync>;
 
 pub(crate) struct HandshakeConfig {
     pub(crate) local_psk_callback: Option<PskCallback>,
@@ -87,13 +92,26 @@ pub(crate) struct HandshakeConfig {
     pub(crate) insecure_skip_verify: bool,
     pub(crate) insecure_verification: bool,
     pub(crate) verify_peer_certificate: Option<VerifyPeerCertificateFn>,
-    pub(crate) roots_cas: rustls::RootCertStore,
-    pub(crate) server_cert_verifier: Arc<dyn rustls::ServerCertVerifier>,
-    pub(crate) client_cert_verifier: Option<Arc<dyn rustls::ClientCertVerifier>>,
+    pub(crate) server_cert_verifier: Arc<dyn ServerCertVerifier>,
+    pub(crate) client_cert_verifier: Option<Arc<dyn ClientCertVerifier>>,
     pub(crate) retransmit_interval: tokio::time::Duration,
     pub(crate) initial_epoch: u16,
     //log           logging.LeveledLogger
     //mu sync.Mutex
+}
+
+pub fn gen_self_signed_root_cert() -> rustls::RootCertStore {
+    let mut certs = rustls::RootCertStore::empty();
+    certs
+        .add(
+            rcgen::generate_simple_self_signed(vec![])
+                .unwrap()
+                .cert
+                .der()
+                .to_owned(),
+        )
+        .unwrap();
+    certs
 }
 
 impl Default for HandshakeConfig {
@@ -112,8 +130,11 @@ impl Default for HandshakeConfig {
             insecure_skip_verify: false,
             insecure_verification: false,
             verify_peer_certificate: None,
-            roots_cas: rustls::RootCertStore::empty(),
-            server_cert_verifier: Arc::new(rustls::WebPKIVerifier::new()),
+            server_cert_verifier: rustls::client::WebPkiServerVerifier::builder(Arc::new(
+                gen_self_signed_root_cert(),
+            ))
+            .build()
+            .unwrap(),
             client_cert_verifier: None,
             retransmit_interval: tokio::time::Duration::from_secs(0),
             initial_epoch: 0,

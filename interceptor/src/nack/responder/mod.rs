@@ -2,22 +2,22 @@ mod responder_stream;
 #[cfg(test)]
 mod responder_test;
 
-use crate::stream_info::StreamInfo;
-use crate::{
-    Attributes, Interceptor, InterceptorBuilder, RTCPReader, RTCPWriter, RTPReader, RTPWriter,
-};
-use responder_stream::ResponderStream;
-
-use crate::error::Result;
-use crate::nack::stream_support_nack;
-
-use async_trait::async_trait;
-use rtcp::transport_feedbacks::transport_layer_nack::TransportLayerNack;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use async_trait::async_trait;
+use responder_stream::ResponderStream;
+use rtcp::transport_feedbacks::transport_layer_nack::TransportLayerNack;
 use tokio::sync::Mutex;
+
+use crate::error::Result;
+use crate::nack::stream_support_nack;
+use crate::stream_info::StreamInfo;
+use crate::{
+    Attributes, Interceptor, InterceptorBuilder, RTCPReader, RTCPWriter, RTPReader, RTPWriter,
+};
 
 /// GeneratorBuilder can be used to configure Responder Interceptor
 #[derive(Default)]
@@ -38,11 +38,7 @@ impl InterceptorBuilder for ResponderBuilder {
     fn build(&self, _id: &str) -> Result<Arc<dyn Interceptor + Send + Sync>> {
         Ok(Arc::new(Responder {
             internal: Arc::new(ResponderInternal {
-                log2_size: if let Some(log2_size) = self.log2_size {
-                    log2_size
-                } else {
-                    13 // 8192 = 1 << 13
-                },
+                log2_size: self.log2_size.unwrap_or(13), // 8192 = 1 << 13
                 streams: Arc::new(Mutex::new(HashMap::new())),
             }),
         }))
@@ -69,8 +65,10 @@ impl ResponderInternal {
         };
 
         for n in &nack.nacks {
+            // can't use n.range() since this callback is async fn,
+            // instead, use NackPair into_iter()
             let stream2 = Arc::clone(&stream);
-            n.range(Box::new(
+            let f = Box::new(
                 move |seq: u16| -> Pin<Box<dyn Future<Output = bool> + Send + 'static>> {
                     let stream3 = Arc::clone(&stream2);
                     Box::pin(async move {
@@ -80,12 +78,15 @@ impl ResponderInternal {
                                 log::warn!("failed resending nacked packet: {}", err);
                             }
                         }
-
                         true
                     })
                 },
-            ))
-            .await;
+            );
+            for packet_id in n.into_iter() {
+                if !f(packet_id).await {
+                    return;
+                }
+            }
         }
     }
 }
@@ -97,11 +98,12 @@ pub struct ResponderRtcpReader {
 
 #[async_trait]
 impl RTCPReader for ResponderRtcpReader {
-    async fn read(&self, buf: &mut [u8], a: &Attributes) -> Result<(usize, Attributes)> {
-        let (n, attr) = { self.parent_rtcp_reader.read(buf, a).await? };
-
-        let mut b = &buf[..n];
-        let pkts = rtcp::packet::unmarshal(&mut b)?;
+    async fn read(
+        &self,
+        buf: &mut [u8],
+        a: &Attributes,
+    ) -> Result<(Vec<Box<dyn rtcp::packet::Packet + Send + Sync>>, Attributes)> {
+        let (pkts, attr) = { self.parent_rtcp_reader.read(buf, a).await? };
         for p in &pkts {
             if let Some(nack) = p.as_any().downcast_ref::<TransportLayerNack>() {
                 let nack = nack.clone();
@@ -112,7 +114,7 @@ impl RTCPReader for ResponderRtcpReader {
             }
         }
 
-        Ok((n, attr))
+        Ok((pkts, attr))
     }
 }
 

@@ -1,3 +1,9 @@
+use std::fmt;
+use std::io::BufWriter;
+
+use async_trait::async_trait;
+use log::*;
+
 use super::flight6::*;
 use super::*;
 use crate::cipher_suite::*;
@@ -13,6 +19,7 @@ use crate::extension::extension_supported_elliptic_curves::*;
 use crate::extension::extension_supported_point_formats::*;
 use crate::extension::extension_use_extended_master_secret::*;
 use crate::extension::extension_use_srtp::*;
+use crate::extension::renegotiation_info::ExtensionRenegotiationInfo;
 use crate::extension::*;
 use crate::handshake::handshake_message_certificate::*;
 use crate::handshake::handshake_message_certificate_request::*;
@@ -24,12 +31,6 @@ use crate::prf::*;
 use crate::record_layer::record_layer_header::*;
 use crate::record_layer::*;
 use crate::signature_hash_algorithm::*;
-
-use crate::extension::renegotiation_info::ExtensionRenegotiationInfo;
-use async_trait::async_trait;
-use log::*;
-use std::fmt;
-use std::io::BufWriter;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Flight4;
@@ -107,7 +108,7 @@ impl Flight for Flight4 {
                 }
             };
 
-            state.peer_certificates = h.certificate.clone();
+            state.peer_certificates.clone_from(&h.certificate);
             trace!(
                 "[handshake] PeerCertificates4 {}",
                 state.peer_certificates.len()
@@ -268,7 +269,7 @@ impl Flight for Flight4 {
             state.peer_certificates_verified = verified
         } else if !state.peer_certificates.is_empty() {
             // A certificate was received, but we haven't seen a CertificateVerify
-            // keep reading until we receieve one
+            // keep reading until we receive one
             return Err((None, None));
         }
 
@@ -302,7 +303,9 @@ impl Flight for Flight4 {
                             }
                         };
 
-                        state.identity_hint = client_key_exchange.identity_hint.clone();
+                        state
+                            .identity_hint
+                            .clone_from(&client_key_exchange.identity_hint);
                         pre_master_secret = prf_psk_pre_master_secret(&psk);
                     } else if let Some(local_keypair) = &state.local_keypair {
                         pre_master_secret = match prf_pre_master_secret(
@@ -577,7 +580,7 @@ impl Flight for Flight4 {
                             certificate: certificate
                                 .certificate
                                 .iter()
-                                .map(|x| x.0.clone())
+                                .map(|x| x.as_ref().to_owned())
                                 .collect(),
                         },
                     ))),
@@ -725,10 +728,12 @@ impl Flight for Flight4 {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use tokio::sync::Mutex;
+
     use super::*;
     use crate::error::Result;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
 
     struct MockCipherSuite {}
 

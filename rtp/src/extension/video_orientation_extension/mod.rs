@@ -5,7 +5,8 @@ use std::convert::{TryFrom, TryInto};
 
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
-use util::{marshal::Unmarshal, Marshal, MarshalSize};
+use util::marshal::Unmarshal;
+use util::{Marshal, MarshalSize};
 
 use crate::Error;
 
@@ -42,14 +43,16 @@ pub struct VideoOrientationExtension {
     pub rotation: VideoRotation,
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum CameraDirection {
+    #[default]
     Front = 0,
     Back = 1,
 }
 
-#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum VideoRotation {
+    #[default]
     Degree0 = 0,
     Degree90 = 1,
     Degree180 = 2,
@@ -125,17 +128,5 @@ impl TryFrom<u8> for VideoRotation {
                 "Unhandled video rotation: {value}"
             ))),
         }
-    }
-}
-
-impl Default for CameraDirection {
-    fn default() -> Self {
-        CameraDirection::Front
-    }
-}
-
-impl Default for VideoRotation {
-    fn default() -> Self {
-        VideoRotation::Degree0
     }
 }

@@ -14,10 +14,8 @@ const MAX_DNS_SUFFIX_STRING_LENGTH: usize = 256;
 pub const IP_ADAPTER_IPV4_ENABLED: DWORD = 0x0080;
 pub const IP_ADAPTER_IPV6_ENABLED: DWORD = 0x0100;
 
-use std::io;
-use std::mem;
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
-use std::ptr;
+use std::{io, mem, ptr};
 
 use winapi::shared::winerror::{
     ERROR_ADDRESS_NOT_ASSOCIATED, ERROR_BUFFER_OVERFLOW, ERROR_INVALID_PARAMETER,
@@ -311,7 +309,7 @@ unsafe fn local_ifaces_with_buffer(buffer: &mut Vec<u8>) -> io::Result<()> {
         )),
         _ => Err(io::Error::new(
             io::ErrorKind::Other,
-            "Some Other Error Occured.",
+            "Some Other Error Occurred.",
         )),
     }
 }
@@ -329,16 +327,16 @@ unsafe fn map_adapter_addresses(mut adapter_addr: *const IpAdapterAddresses) -> 
             // For some reason, some IpDadState::IpDadStateDeprecated addresses are return
             // These contain BOGUS interface indices and will cause problesm if used
             if curr_unicast_addr.dad_state != IpDadState::IpDadStateDeprecated {
-                if is_ipv4_enabled(&curr_unicast_addr) {
+                if is_ipv4_enabled(curr_unicast_addr) {
                     adapter_addresses.push(Interface {
                         name: "".to_string(),
                         kind: Kind::Ipv4,
-                        addr: Some(SocketAddr::V4(v4_socket_from_adapter(&curr_unicast_addr))),
+                        addr: Some(SocketAddr::V4(v4_socket_from_adapter(curr_unicast_addr))),
                         mask: None,
                         hop: None,
                     });
-                } else if is_ipv6_enabled(&curr_unicast_addr) {
-                    let mut v6_sock = v6_socket_from_adapter(&curr_unicast_addr);
+                } else if is_ipv6_enabled(curr_unicast_addr) {
+                    let mut v6_sock = v6_socket_from_adapter(curr_unicast_addr);
                     // Make sure the scope id is set for ALL interfaces, not just link-local
                     v6_sock.set_scope_id(curr_adapter_addr.xp.ipv6_if_index);
                     adapter_addresses.push(Interface {

@@ -4,13 +4,10 @@ version = "0.5.0"
 authors = ["Rain Liu <yliu@webrtc.rs>"]
 edition = "2021"
 description = "Examples of WebRTC.rs stack"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 documentation = "https://docs.rs/examples"
 homepage = "https://webrtc.rs"
-repository = "https://github.com/webrtc-rs/examples"
-rust-version = "1.60.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+repository = "https://github.com/webrtc-rs/webrtc/tree/master/examples"
 
 [dependencies]
 
@@ -18,21 +15,22 @@ rust-version = "1.60.0"
 [dev-dependencies]
 webrtc = { path = "../webrtc" }
 
-tokio = { version = "1.15", features = ["full"] }
-env_logger = "0.9"
-clap = "3.0"
-hyper = { version = "0.14", features = ["full"] }
+tokio = { version = "1.32.0", features = ["full"] }
+env_logger = "0.11.3"
+clap = "3"
+hyper = { version = "0.14.27", features = ["full"] }
 signal = { path = "examples/signal" }
-tokio-util = { version="0.6", features = ["codec"] }
-anyhow = "1.0"
-chrono = "0.4.23"
-log = "0.4.16"
-serde = { version = "1.0.102", features = ["derive"] }
-serde_json = "1.0"
-bytes = "1.1"
-lazy_static = "1.4"
+tokio-util = { version = "0.7", features = ["codec"] }
+anyhow = "1"
+chrono = "0.4.28"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+bytes = "1"
+lazy_static = "1"
 rand = "0.8"
 
+memchr = "2.1.1"
 
 [[example]]
 name = "rc-cycle"
@@ -87,6 +85,11 @@ bench = false
 [[example]]
 name = "play-from-disk-h264"
 path = "examples/play-from-disk-h264/play-from-disk-h264.rs"
+bench = false
+
+[[example]]
+name = "play-from-disk-hevc"
+path = "examples/play-from-disk-hevc/play-from-disk-hevc.rs"
 bench = false
 
 [[example]]

@@ -1,16 +1,17 @@
 #[cfg(test)]
 mod handshake_message_server_hello_test;
 
+use std::fmt;
+use std::io::{BufReader, BufWriter};
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+
 use super::handshake_random::*;
 use super::*;
 use crate::cipher_suite::*;
 use crate::compression_methods::*;
 use crate::extension::*;
 use crate::record_layer::record_layer_header::*;
-
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::fmt;
-use std::io::{BufReader, BufWriter};
 
 /*
 The server will send this message in response to a ClientHello
@@ -41,7 +42,7 @@ impl PartialEq for HandshakeMessageServerHello {
 
 impl fmt::Debug for HandshakeMessageServerHello {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = vec![
+        let s = [
             format!("version: {:?} random: {:?}", self.version, self.random),
             format!("cipher_suites: {:?}", self.cipher_suite),
             format!("compression_method: {:?}", self.compression_method),

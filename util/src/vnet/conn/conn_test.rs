@@ -1,6 +1,8 @@
-use super::*;
 use std::str::FromStr;
-use std::sync::atomic::AtomicUsize;
+
+use portable_atomic::AtomicUsize;
+
+use super::*;
 
 #[derive(Default)]
 struct DummyObserver {

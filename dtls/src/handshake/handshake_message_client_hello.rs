@@ -1,16 +1,17 @@
 #[cfg(test)]
 mod handshake_message_client_hello_test;
 
+use std::fmt;
+use std::io::{BufReader, BufWriter};
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+
 use super::handshake_random::*;
 use super::*;
 use crate::cipher_suite::*;
 use crate::compression_methods::*;
 use crate::extension::*;
 use crate::record_layer::record_layer_header::*;
-
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::fmt;
-use std::io::{BufReader, BufWriter};
 
 /*
 When a client first connects to a server it is required to send
@@ -59,7 +60,7 @@ impl fmt::Debug for HandshakeMessageClientHello {
             cipher_suites_str += &cipher_suite.to_string();
             cipher_suites_str += " ";
         }
-        let s = vec![
+        let s = [
             format!("version: {:?} random: {:?}", self.version, self.random),
             format!("cookie: {:?}", self.cookie),
             format!("cipher_suites: {cipher_suites_str:?}"),

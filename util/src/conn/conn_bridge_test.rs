@@ -1,10 +1,11 @@
-use super::conn_bridge::*;
-use super::*;
-
-use bytes::Bytes;
 use std::collections::VecDeque;
 use std::sync::Arc;
+
+use bytes::Bytes;
 use tokio::sync::mpsc;
+
+use super::conn_bridge::*;
+use super::*;
 
 static MSG1: Bytes = Bytes::from_static(b"ADC");
 static MSG2: Bytes = Bytes::from_static(b"DEFG");
@@ -34,7 +35,7 @@ async fn test_bridge_normal() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_bridge_drop_1st_packet_from_conn0() -> Result<()> {
+async fn test_bridge_drop_first_packet_from_conn0() -> Result<()> {
     let (br, conn0, conn1) = Bridge::new(0, None, None);
 
     let n = conn0.send(&MSG1).await?;
@@ -61,7 +62,7 @@ async fn test_bridge_drop_1st_packet_from_conn0() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_bridge_drop_2nd_packet_from_conn0() -> Result<()> {
+async fn test_bridge_drop_second_packet_from_conn0() -> Result<()> {
     let (br, conn0, conn1) = Bridge::new(0, None, None);
 
     let n = conn0.send(&MSG1).await?;
@@ -88,7 +89,7 @@ async fn test_bridge_drop_2nd_packet_from_conn0() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_bridge_drop_1st_packet_from_conn1() -> Result<()> {
+async fn test_bridge_drop_first_packet_from_conn1() -> Result<()> {
     let (br, conn0, conn1) = Bridge::new(0, None, None);
 
     let n = conn1.send(&MSG1).await?;
@@ -115,7 +116,7 @@ async fn test_bridge_drop_1st_packet_from_conn1() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_bridge_drop_2nd_packet_from_conn1() -> Result<()> {
+async fn test_bridge_drop_second_packet_from_conn1() -> Result<()> {
     let (br, conn0, conn1) = Bridge::new(0, None, None);
 
     let n = conn1.send(&MSG1).await?;

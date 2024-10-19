@@ -1,20 +1,20 @@
 #[cfg(test)]
 mod setting_engine_test;
 
-use crate::dtls_transport::dtls_role::DTLSRole;
-use crate::ice_transport::ice_candidate_type::RTCIceCandidateType;
+use std::sync::Arc;
+
 use dtls::extension::extension_use_srtp::SrtpProtectionProfile;
 use ice::agent::agent_config::{InterfaceFilterFn, IpFilterFn};
 use ice::mdns::MulticastDnsMode;
 use ice::network_type::NetworkType;
 use ice::udp_network::UDPNetwork;
-
-use crate::error::{Error, Result};
-
-use crate::RECEIVE_MTU;
-use std::sync::Arc;
 use tokio::time::Duration;
 use util::vnet::net::*;
+
+use crate::dtls_transport::dtls_role::DTLSRole;
+use crate::error::{Error, Result};
+use crate::ice_transport::ice_candidate_type::RTCIceCandidateType;
+use crate::RECEIVE_MTU;
 
 #[derive(Default, Clone)]
 pub struct Detach {
@@ -44,6 +44,7 @@ pub struct Candidates {
     pub multicast_dns_host_name: String,
     pub username_fragment: String,
     pub password: String,
+    pub include_loopback_candidate: bool,
 }
 
 #[derive(Default, Clone)]
@@ -77,6 +78,7 @@ pub struct SettingEngine {
     pub(crate) srtp_protection_profiles: Vec<SrtpProtectionProfile>,
     pub(crate) receive_mtu: usize,
     pub(crate) mid_generator: Option<Arc<dyn Fn(isize) -> String + Send + Sync>>,
+    pub(crate) enable_sender_rtx: bool,
 }
 
 impl SettingEngine {
@@ -279,6 +281,15 @@ impl SettingEngine {
         self.disable_srtcp_replay_protection = is_disabled;
     }
 
+    /// set_include_loopback_candidate enables webrtc-rs to gather loopback candidates, it is
+    /// useful for, e.g., some VMs that have public IP mapped to loopback interface.
+    /// Note that allowing loopback candidates to be gathered is technically inconsistent with the
+    /// webRTC spec (see https://www.rfc-editor.org/rfc/rfc8445#section-5.1.1.1). This option is
+    /// therefore disabled by default, and should be used with caution.
+    pub fn set_include_loopback_candidate(&mut self, allow_loopback: bool) {
+        self.candidates.include_loopback_candidate = allow_loopback;
+    }
+
     /// set_sdp_media_level_fingerprints configures the logic for dtls_transport Fingerprint insertion
     /// If true, fingerprints will be inserted in the sdp at the fingerprint
     /// level, instead of the session level. This helps with compatibility with
@@ -323,5 +334,12 @@ impl SettingEngine {
     /// to allow them to efficiently fit into the RTP header extension
     pub fn set_mid_generator(&mut self, f: impl Fn(isize) -> String + Send + Sync + 'static) {
         self.mid_generator = Some(Arc::new(f));
+    }
+
+    /// enable_sender_rtx allows outgoing rtx streams to be created where applicable.
+    /// RTPSender will create an RTP retransmission stream for each source stream where a retransmission
+    /// codec is configured.
+    pub fn enable_sender_rtx(&mut self, is_enabled: bool) {
+        self.enable_sender_rtx = is_enabled;
     }
 }

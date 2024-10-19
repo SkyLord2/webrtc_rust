@@ -1,16 +1,17 @@
-use webrtc_sctp::association::*;
-use webrtc_sctp::stream::*;
-use webrtc_sctp::Error;
-
-use bytes::Bytes;
-use clap::{App, AppSettings, Arg};
 use std::net::Shutdown;
 use std::sync::Arc;
 use std::time::Duration;
+
+use bytes::Bytes;
+use clap::{App, AppSettings, Arg};
 use tokio::net::UdpSocket;
 use tokio::signal;
 use tokio::sync::mpsc;
-use util::{conn::conn_disconnected_packet::DisconnectedPacketConn, Conn};
+use util::conn::conn_disconnected_packet::DisconnectedPacketConn;
+use util::Conn;
+use webrtc_sctp::association::*;
+use webrtc_sctp::stream::*;
+use webrtc_sctp::Error;
 
 // RUST_LOG=trace cargo run --color=always --package webrtc-sctp --example pong -- --host 0.0.0.0:5678
 
@@ -73,7 +74,7 @@ async fn main() -> Result<(), Error> {
     let stream = a.accept_stream().await.unwrap();
     println!("accepted a stream");
 
-    // set unordered = true and 10ms treshold for dropping packets
+    // set unordered = true and 10ms threshold for dropping packets
     stream.set_reliability_params(true, ReliabilityType::Timed, 10);
 
     let (done_tx, mut done_rx) = mpsc::channel::<()>(1);

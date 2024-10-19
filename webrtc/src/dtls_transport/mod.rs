@@ -1,24 +1,24 @@
-use arc_swap::ArcSwapOption;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
+use arc_swap::ArcSwapOption;
 use bytes::Bytes;
 use dtls::config::ClientAuthType;
 use dtls::conn::DTLSConn;
 use dtls::extension::extension_use_srtp::SrtpProtectionProfile;
+use dtls_role::*;
 use interceptor::stream_info::StreamInfo;
 use interceptor::{Interceptor, RTCPReader, RTPReader};
+use portable_atomic::{AtomicBool, AtomicU8};
 use sha2::{Digest, Sha256};
 use srtp::protection_profile::ProtectionProfile;
 use srtp::session::Session;
 use srtp::stream::Stream;
 use tokio::sync::{mpsc, Mutex};
 use util::Conn;
-
-use dtls_role::*;
 
 use crate::api::setting_engine::SettingEngine;
 use crate::dtls_transport::dtls_parameters::DTLSParameters;
@@ -44,7 +44,9 @@ pub mod dtls_transport_state;
 pub(crate) fn default_srtp_protection_profiles() -> Vec<SrtpProtectionProfile> {
     vec![
         SrtpProtectionProfile::Srtp_Aead_Aes_128_Gcm,
+        SrtpProtectionProfile::Srtp_Aead_Aes_256_Gcm,
         SrtpProtectionProfile::Srtp_Aes128_Cm_Hmac_Sha1_80,
+        SrtpProtectionProfile::Srtp_Aes128_Cm_Hmac_Sha1_32,
     ]
 }
 
@@ -414,8 +416,14 @@ impl RTCDtlsTransport {
                 dtls::extension::extension_use_srtp::SrtpProtectionProfile::Srtp_Aead_Aes_128_Gcm => {
                     srtp::protection_profile::ProtectionProfile::AeadAes128Gcm
                 }
+                dtls::extension::extension_use_srtp::SrtpProtectionProfile::Srtp_Aead_Aes_256_Gcm => {
+                    srtp::protection_profile::ProtectionProfile::AeadAes256Gcm
+                }
                 dtls::extension::extension_use_srtp::SrtpProtectionProfile::Srtp_Aes128_Cm_Hmac_Sha1_80 => {
                     srtp::protection_profile::ProtectionProfile::Aes128CmHmacSha1_80
+                }
+                dtls::extension::extension_use_srtp::SrtpProtectionProfile::Srtp_Aes128_Cm_Hmac_Sha1_32 => {
+                    srtp::protection_profile::ProtectionProfile::Aes128CmHmacSha1_32
                 }
                 _ => {
                     if let Err(err) = dtls_conn.close().await {

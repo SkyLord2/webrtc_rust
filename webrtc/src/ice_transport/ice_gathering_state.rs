@@ -1,8 +1,17 @@
 use std::fmt;
 
 /// ICEGatheringState describes the state of the candidate gathering process.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/iceGatheringState
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dom-peerconnection-ice-gathering-state
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTCIceGatheringState {
+    #[default]
     Unspecified,
 
     /// ICEGatheringStateNew indicates that any of the ICETransports are
@@ -17,12 +26,6 @@ pub enum RTCIceGatheringState {
     /// ICEGatheringStateComplete indicates that at least one ICETransport
     /// exists, and all ICETransports are in the "completed" gathering state.
     Complete,
-}
-
-impl Default for RTCIceGatheringState {
-    fn default() -> Self {
-        RTCIceGatheringState::Unspecified
-    }
 }
 
 const ICE_GATHERING_STATE_NEW_STR: &str = "new";

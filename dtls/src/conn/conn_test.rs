@@ -1,3 +1,10 @@
+use std::time::SystemTime;
+
+use rand::Rng;
+use rustls::pki_types::CertificateDer;
+use util::conn::conn_pipe::*;
+use util::KeyingMaterialExporter;
+
 use super::*;
 use crate::cipher_suite::cipher_suite_aes_128_gcm_sha256::*;
 use crate::cipher_suite::*;
@@ -8,6 +15,7 @@ use crate::error::*;
 use crate::extension::extension_supported_elliptic_curves::*;
 use crate::extension::extension_supported_point_formats::*;
 use crate::extension::extension_supported_signature_algorithms::*;
+use crate::extension::renegotiation_info::ExtensionRenegotiationInfo;
 use crate::extension::*;
 use crate::handshake::handshake_message_certificate::*;
 use crate::handshake::handshake_message_client_hello::*;
@@ -17,12 +25,6 @@ use crate::handshake::handshake_message_server_hello_done::*;
 use crate::handshake::handshake_message_server_key_exchange::*;
 use crate::handshake::handshake_random::*;
 use crate::signature_hash_algorithm::*;
-
-use crate::extension::renegotiation_info::ExtensionRenegotiationInfo;
-use rand::Rng;
-use std::time::SystemTime;
-use util::conn::conn_pipe::*;
-use util::KeyingMaterialExporter;
 
 const ERR_TEST_PSK_INVALID_IDENTITY: &str = "TestPSK: Server got invalid identity";
 const ERR_PSK_REJECTED: &str = "PSK Rejected";
@@ -859,13 +861,13 @@ async fn test_client_certificate() -> Result<()> {
     let srv_cert = Certificate::generate_self_signed(vec!["localhost".to_owned()])?;
     let mut srv_ca_pool = rustls::RootCertStore::empty();
     srv_ca_pool
-        .add(&srv_cert.certificate[0])
+        .add(srv_cert.certificate[0].to_owned())
         .map_err(|_err| Error::Other("add srv_cert error".to_owned()))?;
 
     let cert = Certificate::generate_self_signed(vec!["localhost".to_owned()])?;
     let mut ca_pool = rustls::RootCertStore::empty();
     ca_pool
-        .add(&cert.certificate[0])
+        .add(cert.certificate[0].to_owned())
         .map_err(|_err| Error::Other("add cert error".to_owned()))?;
 
     let tests = vec![
@@ -1290,21 +1292,21 @@ async fn test_extended_master_secret() -> Result<()> {
     Ok(())
 }
 
-fn fn_not_expected_chain(_cert: &[Vec<u8>], chain: &[rustls::Certificate]) -> Result<()> {
+fn fn_not_expected_chain(_cert: &[Vec<u8>], chain: &[CertificateDer<'static>]) -> Result<()> {
     if !chain.is_empty() {
         return Err(Error::Other(ERR_NOT_EXPECTED_CHAIN.to_owned()));
     }
     Ok(())
 }
 
-fn fn_expected_chain(_cert: &[Vec<u8>], chain: &[rustls::Certificate]) -> Result<()> {
+fn fn_expected_chain(_cert: &[Vec<u8>], chain: &[CertificateDer<'static>]) -> Result<()> {
     if chain.is_empty() {
         return Err(Error::Other(ERR_EXPECTED_CHAIN.to_owned()));
     }
     Ok(())
 }
 
-fn fn_wrong_cert(_cert: &[Vec<u8>], _chain: &[rustls::Certificate]) -> Result<()> {
+fn fn_wrong_cert(_cert: &[Vec<u8>], _chain: &[CertificateDer<'static>]) -> Result<()> {
     Err(Error::Other(ERR_WRONG_CERT.to_owned()))
 }
 
@@ -1329,7 +1331,7 @@ async fn test_server_certificate() -> Result<()> {
     let cert = Certificate::generate_self_signed(vec![server_name.clone()])?;
     let mut ca_pool = rustls::RootCertStore::empty();
     ca_pool
-        .add(&cert.certificate[0])
+        .add(cert.certificate[0].clone())
         .map_err(|_err| Error::Other("add cert error".to_owned()))?;
 
     let tests = vec![
@@ -2373,7 +2375,7 @@ async fn send_client_hello(
 // a ClientHello contained that extension or not
 #[cfg(not(target_os = "windows"))] // this times out in CI on windows.
 #[tokio::test]
-async fn test_renegotation_info() -> Result<()> {
+async fn test_renegotiation_info() -> Result<()> {
     let mut resp = vec![0u8; 1024];
 
     let tests = vec![
@@ -2439,13 +2441,13 @@ async fn test_renegotation_info() -> Result<()> {
             }
         };
 
-        let got_negotation_info = server_hello
+        let got_negotiation_info = server_hello
             .extensions
             .iter()
             .any(|v| matches!(v, Extension::RenegotiationInfo(_)));
 
         assert!(
-            got_negotation_info,
+            got_negotiation_info,
             "{name}: Received ServerHello without RenegotiationInfo"
         );
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Remove builder pattern from `data_channel::Config` [#411](https://github.com/webrtc-rs/webrtc/pull/411).
+
+## v0.7.0
+
+* Increased required `webrtc-sctp` version to `0.8.0`.
+
 ## v0.6.0
 
 * Increased minimum support rust version to `1.60.0`.
@@ -17,7 +23,7 @@
 ## v0.5.0
 
 * [#16 [PollDataChannel] reset shutdown_fut future after done](https://github.com/webrtc-rs/data/pull/16) by [@melekes](https://github.com/melekes).
-* Increase min verison of `log` dependency to `0.4.16`. [#250 Fix log at ^0.4.16 to make tests compile](https://github.com/webrtc-rs/webrtc/pull/250) by [@k0nserv](https://github.com/k0nserv).
+* Increase min version of `log` dependency to `0.4.16`. [#250 Fix log at ^0.4.16 to make tests compile](https://github.com/webrtc-rs/webrtc/pull/250) by [@k0nserv](https://github.com/k0nserv).
 
 ## Prior to 0.4.0
 

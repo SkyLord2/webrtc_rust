@@ -1,20 +1,20 @@
 // Silence warning on `for i in 0..vec.len() { … }`:
 #![allow(clippy::needless_range_loop)]
 
-use super::*;
-use crate::stream::*;
-
-use crate::chunk::chunk_selective_ack::GapAckBlock;
-use async_trait::async_trait;
 use std::io;
-use std::net::Shutdown;
-use std::net::SocketAddr;
+use std::net::{Shutdown, SocketAddr};
 use std::str::FromStr;
 use std::time::Duration;
+
+use async_trait::async_trait;
 use tokio::net::UdpSocket;
 use util::conn::conn_bridge::*;
 use util::conn::conn_pipe::pipe;
 use util::conn::*;
+
+use super::*;
+use crate::chunk::chunk_selective_ack::GapAckBlock;
+use crate::stream::*;
 
 async fn create_new_association_pair(
     br: &Arc<Bridge>,
@@ -740,12 +740,12 @@ async fn test_assoc_reliable_short_buffer() -> Result<()> {
 
     let mut buf = vec![0u8; 3];
     let result = s1.read_sctp(&mut buf).await;
-    assert!(result.is_err(), "expected error to be io.ErrShortBuffer");
+    assert!(result.is_err(), "expected error to be ErrShortBuffer");
     if let Err(err) = result {
         assert_eq!(
             err,
-            Error::ErrShortBuffer,
-            "expected error to be io.ErrShortBuffer"
+            Error::ErrShortBuffer { size: 3 },
+            "expected error to be ErrShortBuffer"
         );
     }
 
@@ -1991,22 +1991,19 @@ async fn test_assoc_reset_close_both_ways() -> Result<()> {
     let done_ch_tx0 = Arc::clone(&done_ch_tx);
     tokio::spawn(async move {
         let mut buf = vec![0u8; 32];
-        loop {
-            log::debug!("s.read_sctp begin");
-            match s0.read_sctp(&mut buf).await {
-                Ok((0, PayloadProtocolIdentifier::Unknown)) => {
-                    log::debug!("s0.read_sctp EOF");
-                    let _ = done_ch_tx0.send(Some(Error::ErrEof)).await;
-                    break;
-                }
-                Ok(_) => {
-                    panic!("must be error");
-                }
-                Err(err) => {
-                    log::debug!("s0.read_sctp err {:?}", err);
-                    let _ = done_ch_tx0.send(Some(err)).await;
-                    break;
-                }
+
+        log::debug!("s.read_sctp begin");
+        match s0.read_sctp(&mut buf).await {
+            Ok((0, PayloadProtocolIdentifier::Unknown)) => {
+                log::debug!("s0.read_sctp EOF");
+                let _ = done_ch_tx0.send(Some(Error::ErrEof)).await;
+            }
+            Ok(_) => {
+                panic!("must be error");
+            }
+            Err(err) => {
+                log::debug!("s0.read_sctp err {:?}", err);
+                let _ = done_ch_tx0.send(Some(err)).await;
             }
         }
     });
@@ -2107,7 +2104,7 @@ struct FakeEchoConn {
 }
 
 impl FakeEchoConn {
-    fn type_erased() -> impl Conn + AsAny {
+    fn type_erased() -> impl Conn {
         Self::default()
     }
 }
@@ -2121,16 +2118,6 @@ impl Default for FakeEchoConn {
             bytes_sent: AtomicUsize::new(0),
             bytes_received: AtomicUsize::new(0),
         }
-    }
-}
-
-trait AsAny {
-    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
-}
-
-impl AsAny for FakeEchoConn {
-    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
-        self
     }
 }
 
@@ -2184,6 +2171,10 @@ impl Conn for FakeEchoConn {
 
     async fn close(&self) -> UResult<()> {
         Ok(())
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }
 

@@ -1,11 +1,13 @@
+use std::time::Duration;
+
+use tokio::net::UdpSocket;
+
 use super::candidate_relay_test::OptimisticAuthHandler;
 use super::*;
 use crate::agent::agent_config::AgentConfig;
 use crate::agent::agent_vnet_test::{connect_with_vnet, on_connected};
 use crate::agent::Agent;
 use crate::url::{SchemeType, Url};
-use std::time::Duration;
-use tokio::net::UdpSocket;
 
 //use std::io::Write;
 
@@ -40,6 +42,7 @@ async fn test_server_reflexive_only_connection() -> Result<()> {
             }),
         }],
         channel_bind_timeout: Duration::from_secs(0),
+        alloc_close_notify: None,
     })
     .await?;
 

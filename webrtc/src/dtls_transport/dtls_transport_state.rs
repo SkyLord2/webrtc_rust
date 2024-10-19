@@ -1,8 +1,17 @@
 use std::fmt;
 
 /// DTLSTransportState indicates the DTLS transport establishment state.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCDtlsTransport/state
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dom-rtcdtlstransportstate
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTCDtlsTransportState {
+    #[default]
     Unspecified = 0,
 
     /// DTLSTransportStateNew indicates that DTLS has not started negotiating
@@ -26,12 +35,6 @@ pub enum RTCDtlsTransportState {
     /// the result of an error (such as receipt of an error alert or failure to
     /// validate the remote fingerprint).
     Failed = 5,
-}
-
-impl Default for RTCDtlsTransportState {
-    fn default() -> Self {
-        RTCDtlsTransportState::Unspecified
-    }
 }
 
 const DTLS_TRANSPORT_STATE_NEW_STR: &str = "new";

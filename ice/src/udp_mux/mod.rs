@@ -1,10 +1,12 @@
-use std::{collections::HashMap, io::ErrorKind, net::SocketAddr, sync::Arc, sync::Weak};
-
-use util::{sync::RwLock, Conn, Error};
+use std::collections::HashMap;
+use std::io::ErrorKind;
+use std::net::SocketAddr;
+use std::sync::{Arc, Weak};
 
 use async_trait::async_trait;
-
 use tokio::sync::{watch, Mutex};
+use util::sync::RwLock;
+use util::{Conn, Error};
 
 mod udp_mux_conn;
 pub use udp_mux_conn::{UDPMuxConn, UDPMuxConnParams, UDPMuxWriter};
@@ -14,10 +16,8 @@ mod udp_mux_test;
 
 mod socket_addr_ext;
 
-use stun::{
-    attributes::ATTR_USERNAME,
-    message::{is_message as is_stun_message, Message as STUNMessage},
-};
+use stun::attributes::ATTR_USERNAME;
+use stun::message::{is_message as is_stun_message, Message as STUNMessage};
 
 use crate::candidate::RECEIVE_MTU;
 
@@ -77,7 +77,7 @@ pub struct UDPMuxDefault {
     // Close sender
     closed_watch_tx: Mutex<Option<watch::Sender<()>>>,
 
-    /// Close reciever
+    /// Close receiver
     closed_watch_rx: watch::Receiver<()>,
 }
 
@@ -153,7 +153,7 @@ impl UDPMuxDefault {
                     .split(':')
                     .next()
                     .and_then(|ufrag| conns.get(ufrag))
-                    .map(Clone::clone);
+                    .cloned();
 
                 conn
             }
@@ -178,12 +178,12 @@ impl UDPMuxDefault {
                                         .address_map
                                         .read();
 
-                                    address_map.get(&addr).map(Clone::clone)
+                                    address_map.get(&addr).cloned()
                                 };
 
                                 let conn = match conn {
                                     // If we couldn't find the connection based on source address, see if
-                                    // this is a STUN mesage and if so if we can find the connection based on ufrag.
+                                    // this is a STUN message and if so if we can find the connection based on ufrag.
                                     None if is_stun_message(&buffer) => {
                                         loop_self.conn_from_stun_message(&buffer, &addr).await
                                     }

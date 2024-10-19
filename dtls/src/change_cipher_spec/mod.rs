@@ -1,8 +1,9 @@
 #[cfg(test)]
 mod change_cipher_spec_test;
 
-use byteorder::{ReadBytesExt, WriteBytesExt};
 use std::io::{Read, Write};
+
+use byteorder::{ReadBytesExt, WriteBytesExt};
 
 use super::content::*;
 use super::error::*;
@@ -11,7 +12,11 @@ use super::error::*;
 // ciphering strategies.  The protocol consists of a single message,
 // which is encrypted and compressed under the current (not the pending)
 // connection state.  The message consists of a single byte of value 1.
-// https://tools.ietf.org/html/rfc5246#section-7.1
+/// ## Specifications
+///
+/// * [RFC 5246 §7.1]
+///
+/// [RFC 5246 §7.1]: https://tools.ietf.org/html/rfc5246#section-7.1
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ChangeCipherSpec;
 

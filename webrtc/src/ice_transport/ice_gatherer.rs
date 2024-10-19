@@ -1,3 +1,16 @@
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
+use arc_swap::ArcSwapOption;
+use ice::agent::Agent;
+use ice::candidate::{Candidate, CandidateType};
+use ice::url::Url;
+use portable_atomic::AtomicU8;
+use tokio::sync::Mutex;
+
 use crate::api::setting_engine::SettingEngine;
 use crate::error::{Error, Result};
 use crate::ice_transport::ice_candidate::*;
@@ -9,18 +22,6 @@ use crate::peer_connection::policy::ice_transport_policy::RTCIceTransportPolicy;
 use crate::stats::stats_collector::StatsCollector;
 use crate::stats::SourceStatsType::*;
 use crate::stats::{ICECandidatePairStats, StatsReportType};
-
-use ice::agent::Agent;
-use ice::candidate::{Candidate, CandidateType};
-use ice::url::Url;
-
-use arc_swap::ArcSwapOption;
-use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicU8, Ordering};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 
 /// ICEGatherOptions provides options relating to the gathering of ICE candidates.
 #[derive(Default, Debug, Clone)]
@@ -121,6 +122,7 @@ impl RTCIceGatherer {
             ip_filter: self.setting_engine.candidates.ip_filter.clone(),
             nat_1to1_ips: self.setting_engine.candidates.nat_1to1_ips.clone(),
             nat_1to1_ip_candidate_type: nat_1to1_cand_type,
+            include_loopback: self.setting_engine.candidates.include_loopback_candidate,
             net: self.setting_engine.vnet.clone(),
             multicast_dns_mode: mdns_mode,
             multicast_dns_host_name: self
@@ -317,11 +319,12 @@ impl RTCIceGatherer {
 
 #[cfg(test)]
 mod test {
+    use tokio::sync::mpsc;
+
     use super::*;
     use crate::api::APIBuilder;
     use crate::ice_transport::ice_gatherer::RTCIceGatherOptions;
     use crate::ice_transport::ice_server::RTCIceServer;
-    use tokio::sync::mpsc;
 
     #[tokio::test]
     async fn test_new_ice_gatherer_success() -> Result<()> {

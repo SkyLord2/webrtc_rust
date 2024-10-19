@@ -1,3 +1,8 @@
+use std::fmt;
+use std::io::{BufReader, BufWriter};
+
+use async_trait::async_trait;
+
 use super::flight3::*;
 use super::*;
 use crate::change_cipher_spec::ChangeCipherSpec;
@@ -16,10 +21,6 @@ use crate::prf::*;
 use crate::record_layer::record_layer_header::*;
 use crate::record_layer::*;
 use crate::signature_hash_algorithm::*;
-
-use async_trait::async_trait;
-use std::fmt;
-use std::io::{BufReader, BufWriter};
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct Flight5;
@@ -206,7 +207,10 @@ impl Flight for Flight5 {
                     Content::Handshake(Handshake::new(HandshakeMessage::Certificate(
                         HandshakeMessageCertificate {
                             certificate: if let Some(cert) = &certificate {
-                                cert.certificate.iter().map(|x| x.0.clone()).collect()
+                                cert.certificate
+                                    .iter()
+                                    .map(|x| x.as_ref().to_owned())
+                                    .collect()
                             } else {
                                 vec![]
                             },
@@ -224,10 +228,14 @@ impl Flight for Flight5 {
         };
         if cfg.local_psk_callback.is_none() {
             if let Some(local_keypair) = &state.local_keypair {
-                client_key_exchange.public_key = local_keypair.public_key.clone();
+                client_key_exchange
+                    .public_key
+                    .clone_from(&local_keypair.public_key);
             }
         } else if let Some(local_psk_identity_hint) = &cfg.local_psk_identity_hint {
-            client_key_exchange.identity_hint = local_psk_identity_hint.clone();
+            client_key_exchange
+                .identity_hint
+                .clone_from(local_psk_identity_hint);
         }
 
         pkts.push(Packet {
@@ -335,7 +343,7 @@ impl Flight for Flight5 {
         }
 
         if let Err((alert, err)) =
-            initalize_cipher_suite(state, cache, cfg, &server_key_exchange, &merged).await
+            initialize_cipher_suite(state, cache, cfg, &server_key_exchange, &merged).await
         {
             return Err((alert, err));
         }
@@ -598,7 +606,7 @@ impl Flight for Flight5 {
         Ok(pkts)
     }
 }
-async fn initalize_cipher_suite(
+async fn initialize_cipher_suite(
     state: &mut State,
     cache: &HandshakeCache,
     cfg: &HandshakeConfig,
@@ -725,7 +733,6 @@ async fn initalize_cipher_suite(
             chains = match verify_server_cert(
                 &state.peer_certificates,
                 &cfg.server_cert_verifier,
-                &cfg.roots_cas,
                 &cfg.server_name,
             ) {
                 Ok(chains) => chains,

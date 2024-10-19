@@ -4,10 +4,23 @@ mod sctp_transport_test;
 pub mod sctp_transport_capabilities;
 pub mod sctp_transport_state;
 
+use std::collections::{HashMap, HashSet};
+use std::future::Future;
+use std::pin::Pin;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+
+use arc_swap::ArcSwapOption;
+use data::data_channel::DataChannel;
+use data::message::message_channel_open::ChannelType;
+use portable_atomic::{AtomicBool, AtomicU32, AtomicU8};
+use sctp::association::Association;
 use sctp_transport_state::RTCSctpTransportState;
-use std::collections::HashSet;
+use tokio::sync::{Mutex, Notify};
+use util::Conn;
 
 use crate::api::setting_engine::SettingEngine;
+use crate::data_channel::data_channel_parameters::DataChannelParameters;
 use crate::data_channel::data_channel_state::RTCDataChannelState;
 use crate::data_channel::RTCDataChannel;
 use crate::dtls_transport::dtls_role::DTLSRole;
@@ -17,21 +30,6 @@ use crate::sctp_transport::sctp_transport_capabilities::SCTPTransportCapabilitie
 use crate::stats::stats_collector::StatsCollector;
 use crate::stats::StatsReportType::{PeerConnection, SCTPTransport};
 use crate::stats::{ICETransportStats, PeerConnectionStats};
-
-use data::message::message_channel_open::ChannelType;
-use sctp::association::Association;
-
-use crate::data_channel::data_channel_parameters::DataChannelParameters;
-
-use arc_swap::ArcSwapOption;
-use data::data_channel::DataChannel;
-use std::collections::HashMap;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU8, Ordering};
-use std::sync::Arc;
-use tokio::sync::{Mutex, Notify};
-use util::Conn;
 
 const SCTP_MAX_CHANNELS: u16 = u16::MAX;
 
@@ -246,8 +244,8 @@ impl RTCSctpTransport {
                 }
             };
 
-            let mut max_retransmits = 0;
-            let mut max_packet_lifetime = 0;
+            let mut max_retransmits = None;
+            let mut max_packet_life_time = None;
             let val = dc.config.reliability_parameter as u16;
             let ordered;
 
@@ -260,19 +258,19 @@ impl RTCSctpTransport {
                 }
                 ChannelType::PartialReliableRexmit => {
                     ordered = true;
-                    max_retransmits = val;
+                    max_retransmits = Some(val);
                 }
                 ChannelType::PartialReliableRexmitUnordered => {
                     ordered = false;
-                    max_retransmits = val;
+                    max_retransmits = Some(val);
                 }
                 ChannelType::PartialReliableTimed => {
                     ordered = true;
-                    max_packet_lifetime = val;
+                    max_packet_life_time = Some(val);
                 }
                 ChannelType::PartialReliableTimedUnordered => {
                     ordered = false;
-                    max_packet_lifetime = val;
+                    max_packet_life_time = Some(val);
                 }
             };
 
@@ -287,7 +285,7 @@ impl RTCSctpTransport {
                     protocol: dc.config.protocol.clone(),
                     negotiated,
                     ordered,
-                    max_packet_life_time: max_packet_lifetime,
+                    max_packet_life_time,
                     max_retransmits,
                 },
                 Arc::clone(&param.setting_engine),

@@ -1,9 +1,8 @@
-use super::*;
-
 ///////////////////////////////////////////////////////////////////
 //chunk_type_test
 ///////////////////////////////////////////////////////////////////
 use super::chunk_type::*;
+use super::*;
 
 #[test]
 fn test_chunk_type_string() -> Result<()> {
@@ -103,9 +102,10 @@ fn test_abort_chunk_many_error_causes() -> Result<()> {
 ///////////////////////////////////////////////////////////////////
 //chunk_error_test
 ///////////////////////////////////////////////////////////////////
-use super::chunk_error::*;
 use bytes::BufMut;
 use lazy_static::lazy_static;
+
+use super::chunk_error::*;
 
 const CHUNK_FLAGS: u8 = 0x00;
 static ORG_UNRECOGNIZED_CHUNK: Bytes =
@@ -243,7 +243,7 @@ static TEST_CHUNK_RECONFIG_PARAM_B: Bytes = Bytes::from_static(&[
     0x0, 0xd, 0x0, 0x10, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x3,
 ]);
 
-static TEST_CHUNK_RECONFIG_RESPONCE: Bytes =
+static TEST_CHUNK_RECONFIG_RESPONSE: Bytes =
     Bytes::from_static(&[0x0, 0x10, 0x0, 0xc, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x1]);
 
 lazy_static! {
@@ -264,7 +264,7 @@ lazy_static! {
         {
             let mut test = BytesMut::new();
             test.extend(vec![0x82, 0x0, 0x0, 0x10]);
-            test.extend(TEST_CHUNK_RECONFIG_RESPONCE.clone());
+            test.extend(TEST_CHUNK_RECONFIG_RESPONSE.clone());
             tests.push(test.freeze());
         }
         {

@@ -2,8 +2,17 @@ use std::fmt;
 
 /// ICERole describes the role ice.Agent is playing in selecting the
 /// preferred the candidate pair.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCIceTransport/role
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dom-rtcicerole
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTCIceRole {
+    #[default]
     Unspecified,
 
     /// ICERoleControlling indicates that the ICE agent that is responsible
@@ -15,12 +24,6 @@ pub enum RTCIceRole {
     /// ICERoleControlled indicates that an ICE agent that waits for the
     /// controlling agent to select the final choice of candidate pairs.
     Controlled,
-}
-
-impl Default for RTCIceRole {
-    fn default() -> Self {
-        RTCIceRole::Unspecified
-    }
 }
 
 const ICE_ROLE_CONTROLLING_STR: &str = "controlling";

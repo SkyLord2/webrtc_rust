@@ -1,19 +1,20 @@
 #[cfg(test)]
 mod ivf_reader_test;
 
-use crate::error::{Error, Result};
-use crate::io::ResetFn;
+use std::io::Read;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use bytes::BytesMut;
-use std::io::Read;
+
+use crate::error::{Error, Result};
+use crate::io::ResetFn;
 
 pub const IVF_FILE_HEADER_SIGNATURE: &[u8] = b"DKIF";
 pub const IVF_FILE_HEADER_SIZE: usize = 32;
 pub const IVF_FRAME_HEADER_SIZE: usize = 12;
 
 /// IVFFileHeader 32-byte header for IVF files
-/// https://wiki.multimedia.cx/index.php/IVF
+/// <https://wiki.multimedia.cx/index.php/IVF>
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct IVFFileHeader {
     pub signature: [u8; 4],        // 0-3
@@ -29,7 +30,7 @@ pub struct IVFFileHeader {
 }
 
 /// IVFFrameHeader 12-byte header for IVF frames
-/// https://wiki.multimedia.cx/index.php/IVF
+/// <https://wiki.multimedia.cx/index.php/IVF>
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct IVFFrameHeader {
     pub frame_size: u32, // 0-3

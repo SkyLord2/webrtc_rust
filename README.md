@@ -4,7 +4,7 @@
 </h1>
 <p align="center">
  <a href="https://github.com/webrtc-rs/webrtc/actions">
-  <img src="https://github.com/webrtc-rs/webrtc/workflows/webrtc/badge.svg?branch=master">
+  <img src="https://github.com/webrtc-rs/webrtc/workflows/cargo/badge.svg?branch=master">
  </a>
  <a href="https://codecov.io/gh/webrtc-rs/webrtc">
   <img src="https://codecov.io/gh/webrtc-rs/webrtc/branch/master/graph/badge.svg">
@@ -35,20 +35,24 @@
 <p align="center">
 <strong>Sponsored with 💖 by</strong><br>
 </p>
-<p align="center">
+<!--p align="center">
 <strong>Gold Sponsors:</strong><br>
 <a href="https://www.parity.io/" target="_blank">
 <img src="https://raw.githubusercontent.com/webrtc-rs/webrtc/master/doc/parity.png" style="height:75px;" alt="Parity Technologies">
-</a><br>
+</a><br-->
 <p align="center">
 <strong>Silver Sponsors:</strong><br>
-<a href="https://getstream.io/?utm_source=https://github.com/webrtc-rs/webrtc&utm_medium=github&utm_content=developer&utm_term=webrtc" target="_blank">
+<a href="https://getstream.io/video/voice-calling/?utm_source=https://github.com/webrtc-rs/webrtc&utm_medium=sponsorship&utm_content=&utm_campaign=webrtcRepo_July2023_video_klmh22" target="_blank">
 <img src="https://stream-blog-v2.imgix.net/blog/wp-content/uploads/f7401112f41742c4e173c30d4f318cb8/stream_logo_white.png?h=50" alt="Stream Chat">
 </a><br>
+<a href="https://channel.io/" target="_blank">
+<img src="https://raw.githubusercontent.com/webrtc-rs/webrtc/master/doc/ChannelTalk_logo.png" alt="ChannelTalk">
+</a><br>
 <strong>Bronze Sponsors:</strong><br>
-<a href="https://www.embark-studios.com/" target="_blank"><img src="https://raw.githubusercontent.com/webrtc-rs/webrtc/master/doc/embark.jpg" alt="embark"></a><br>
+<a href="https://kittycad.io/" target="_blank">
+<img src="https://raw.githubusercontent.com/webrtc-rs/webrtc/master/doc/KittyCAD.png" alt="KittyCAD">
+</a><br>
 <a href="https://github.com/AdrianEddy" target="_blank">AdrianEddy</a><br>
-<a href="https://avstack.io/?utm_medium=social&utm_source=github&utm_campaign=webrtc-rs-sponsorship" target="_blank"><img src="https://avstack.io/assets/logo-full-lightbg.b880ab9e.svg" alt="AVStack" style="width:12rem"></a>
 </p>
 
 <details>
@@ -105,7 +109,7 @@ This project is still in active and early development stage, please refer to the
 
 ### Toolchain
 
-**Minimum Supported Rust Version:** `1.60.0`
+**Minimum Supported Rust Version:** `1.65.0`
 
 Our minimum supported rust version(MSRV) policy is to support versions of the compiler released within the last six months. We don't eagerly bump the minimum version we support, instead the minimum will be bumped on a needed by needed basis, usually because downstream dependencies force us to.
 

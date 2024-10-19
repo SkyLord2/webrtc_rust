@@ -1,12 +1,16 @@
 #[cfg(test)]
 mod full_intra_request_test;
 
-use crate::{error::Error, header::*, packet::*, util::*};
-use util::marshal::{Marshal, MarshalSize, Unmarshal};
-
-use bytes::{Buf, BufMut};
 use std::any::Any;
 use std::fmt;
+
+use bytes::{Buf, BufMut};
+use util::marshal::{Marshal, MarshalSize, Unmarshal};
+
+use crate::error::Error;
+use crate::header::*;
+use crate::packet::*;
+use crate::util::*;
 
 type Result<T> = std::result::Result<T, util::Error>;
 
@@ -100,7 +104,7 @@ impl Marshal for FullIntraRequest {
         buf.put_u32(self.sender_ssrc);
         buf.put_u32(self.media_ssrc);
 
-        for (_, fir) in self.fir.iter().enumerate() {
+        for fir in self.fir.iter() {
             buf.put_u32(fir.ssrc);
             buf.put_u8(fir.sequence_number);
             buf.put_u8(0);

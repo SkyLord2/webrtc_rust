@@ -1,44 +1,36 @@
 #[cfg(test)]
 mod stream_test;
 
+use std::future::Future;
+use std::net::Shutdown;
+use std::pin::Pin;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::task::{Context, Poll};
+use std::{fmt, io};
+
+use arc_swap::ArcSwapOption;
+use bytes::Bytes;
+use portable_atomic::{AtomicBool, AtomicU16, AtomicU32, AtomicU8, AtomicUsize};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use tokio::sync::{mpsc, Mutex, Notify};
+
 use crate::association::AssociationState;
 use crate::chunk::chunk_payload_data::{ChunkPayloadData, PayloadProtocolIdentifier};
 use crate::error::{Error, Result};
 use crate::queue::pending_queue::PendingQueue;
 use crate::queue::reassembly_queue::ReassemblyQueue;
 
-use arc_swap::ArcSwapOption;
-use bytes::Bytes;
-use std::{
-    fmt,
-    future::Future,
-    io,
-    net::Shutdown,
-    pin::Pin,
-    sync::atomic::{AtomicBool, AtomicU16, AtomicU32, AtomicU8, AtomicUsize, Ordering},
-    sync::Arc,
-    task::{Context, Poll},
-};
-use tokio::{
-    io::{AsyncRead, AsyncWrite, ReadBuf},
-    sync::{mpsc, Mutex, Notify},
-};
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(C)]
 pub enum ReliabilityType {
     /// ReliabilityTypeReliable is used for reliable transmission
+    #[default]
     Reliable = 0,
     /// ReliabilityTypeRexmit is used for partial reliability by retransmission count
     Rexmit = 1,
     /// ReliabilityTypeTimed is used for partial reliability by retransmission duration
     Timed = 2,
-}
-
-impl Default for ReliabilityType {
-    fn default() -> Self {
-        ReliabilityType::Reliable
-    }
 }
 
 impl fmt::Display for ReliabilityType {
@@ -68,12 +60,11 @@ pub type OnBufferedAmountLowFn =
 // TODO: benchmark performance between multiple Atomic+Mutex vs one Mutex<StreamInternal>
 
 /// Stream represents an SCTP stream
-#[derive(Default)]
 pub struct Stream {
     pub(crate) max_payload_size: u32,
     pub(crate) max_message_size: Arc<AtomicU32>, // clone from association
     pub(crate) state: Arc<AtomicU8>,             // clone from association
-    pub(crate) awake_write_loop_ch: Option<Arc<mpsc::Sender<()>>>,
+    pub(crate) awake_write_loop_ch: Arc<mpsc::Sender<()>>,
     pub(crate) pending_queue: Arc<PendingQueue>,
 
     pub(crate) stream_identifier: u16,
@@ -122,10 +113,10 @@ impl Stream {
         max_payload_size: u32,
         max_message_size: Arc<AtomicU32>,
         state: Arc<AtomicU8>,
-        awake_write_loop_ch: Option<Arc<mpsc::Sender<()>>>,
+        awake_write_loop_ch: Arc<mpsc::Sender<()>>,
         pending_queue: Arc<PendingQueue>,
     ) -> Self {
-        Stream {
+        Self {
             max_payload_size,
             max_message_size,
             state,
@@ -200,7 +191,7 @@ impl Stream {
             };
 
             match result {
-                Ok(_) | Err(Error::ErrShortBuffer) => return result,
+                Ok(_) | Err(Error::ErrShortBuffer { .. }) => return result,
                 Err(_) => {
                     // wait for the next chunk to become available
                     self.read_notifier.notified().await;
@@ -487,9 +478,7 @@ impl Stream {
 
     fn awake_write_loop(&self) {
         //log::debug!("[{}] awake_write_loop_ch.notify_one", self.name);
-        if let Some(awake_write_loop_ch) = &self.awake_write_loop_ch {
-            let _ = awake_write_loop_ch.try_send(());
-        }
+        let _ = self.awake_write_loop_ch.try_send(());
     }
 
     async fn send_payload_data(&self, chunks: Vec<ChunkPayloadData>) -> Result<()> {
@@ -598,16 +587,6 @@ pub struct PollStream {
 
 impl PollStream {
     /// Constructs a new `PollStream`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use webrtc_sctp::stream::{Stream, PollStream};
-    /// use std::sync::Arc;
-    ///
-    /// let stream = Arc::new(Stream::default());
-    /// let poll_stream = PollStream::new(stream);
-    /// ```
     pub fn new(stream: Arc<Stream>) -> Self {
         Self {
             stream,

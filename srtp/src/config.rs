@@ -1,6 +1,8 @@
-use crate::error::Result;
-use crate::{option::*, protection_profile::*};
 use util::KeyingMaterialExporter;
+
+use crate::error::Result;
+use crate::option::*;
+use crate::protection_profile::*;
 
 const LABEL_EXTRACTOR_DTLS_SRTP: &str = "EXTRACTOR-dtls_srtp";
 
@@ -35,7 +37,7 @@ pub struct Config {
 impl Config {
     /// ExtractSessionKeysFromDTLS allows setting the Config SessionKeys by
     /// extracting them from DTLS. This behavior is defined in RFC5764:
-    /// https://tools.ietf.org/html/rfc5764
+    /// <https://tools.ietf.org/html/rfc5764>
     pub async fn extract_session_keys_from_dtls(
         &mut self,
         exporter: impl KeyingMaterialExporter,

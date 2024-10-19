@@ -1,14 +1,16 @@
 #[cfg(test)]
 mod transport_layer_nack_test;
 
-use crate::{error::Error, header::*, packet::*, util::*};
-use util::marshal::{Marshal, MarshalSize, Unmarshal};
-
-use bytes::{Buf, BufMut};
 use std::any::Any;
 use std::fmt;
-use std::future::Future;
-use std::pin::Pin;
+
+use bytes::{Buf, BufMut};
+use util::marshal::{Marshal, MarshalSize, Unmarshal};
+
+use crate::error::Error;
+use crate::header::*;
+use crate::packet::*;
+use crate::util::*;
 
 /// PacketBitmap shouldn't be used like a normal integral,
 /// so it's type is masked here. Access it with PacketList().
@@ -23,9 +25,6 @@ pub struct NackPair {
     /// Bitmask of following lost packets
     pub lost_packets: PacketBitmap,
 }
-
-pub type RangeFn =
-    Box<dyn (Fn(u16) -> Pin<Box<dyn Future<Output = bool> + Send + 'static>>) + Send + Sync>;
 
 pub struct NackIterator {
     packet_id: u16,
@@ -72,9 +71,12 @@ impl NackPair {
         self.into_iter().collect()
     }
 
-    pub async fn range(&self, f: RangeFn) {
+    pub fn range<F>(&self, f: F)
+    where
+        F: Fn(u16) -> bool,
+    {
         for packet_id in self.into_iter() {
-            if !f(packet_id).await {
+            if !f(packet_id) {
                 return;
             }
         }
@@ -100,8 +102,11 @@ const TLN_LENGTH: usize = 2;
 const NACK_OFFSET: usize = 8;
 
 // The TransportLayerNack packet informs the encoder about the loss of a transport packet
-// IETF RFC 4585, Section 6.2.1
-// https://tools.ietf.org/html/rfc4585#section-6.2.1
+/// ## Specifications
+///
+/// * [RFC 4585 §6.2.1]
+///
+/// [RFC 4585 §6.2.1]: https://tools.ietf.org/html/rfc4585#section-6.2.1
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub struct TransportLayerNack {
     /// SSRC of sender
@@ -171,7 +176,7 @@ impl MarshalSize for TransportLayerNack {
 impl Marshal for TransportLayerNack {
     /// Marshal encodes the packet in binary.
     fn marshal_to(&self, mut buf: &mut [u8]) -> Result<usize, util::Error> {
-        if self.nacks.len() + TLN_LENGTH > std::u8::MAX as usize {
+        if self.nacks.len() + TLN_LENGTH > u8::MAX as usize {
             return Err(Error::TooManyReports.into());
         }
         if buf.remaining_mut() < self.marshal_size() {

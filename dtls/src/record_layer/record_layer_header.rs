@@ -1,9 +1,9 @@
-use crate::content::*;
-
-use crate::error::*;
+use std::io::{Read, Write};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Read, Write};
+
+use crate::content::*;
+use crate::error::*;
 
 pub const RECORD_LAYER_HEADER_SIZE: usize = 13;
 pub const MAX_SEQUENCE_NUMBER: u64 = 0x0000FFFFFFFFFFFF;
@@ -27,7 +27,11 @@ pub const PROTOCOL_VERSION1_2: ProtocolVersion = ProtocolVersion {
     minor: DTLS1_2MINOR,
 };
 
-// https://tools.ietf.org/html/rfc4346#section-6.2.1
+/// ## Specifications
+///
+/// * [RFC 4346 §6.2.1]
+///
+/// [RFC 4346 §6.2.1]: https://tools.ietf.org/html/rfc4346#section-6.2.1
 #[derive(Copy, Clone, PartialEq, Eq, Debug, Default)]
 pub struct ProtocolVersion {
     pub major: u8,

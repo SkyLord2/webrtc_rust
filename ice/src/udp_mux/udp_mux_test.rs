@@ -2,15 +2,14 @@ use std::convert::TryInto;
 use std::io;
 use std::time::Duration;
 
-use super::*;
-use crate::error::Result;
+use rand::{thread_rng, Rng};
+use sha1::{Digest, Sha1};
 use stun::message::{Message, BINDING_REQUEST};
-
 use tokio::net::UdpSocket;
 use tokio::time::{sleep, timeout};
 
-use rand::{thread_rng, Rng};
-use sha1::{Digest, Sha1};
+use super::*;
+use crate::error::Result;
 
 #[derive(Debug, Copy, Clone)]
 enum Network {
@@ -27,7 +26,7 @@ impl Network {
         }
     }
 
-    /// Connnect ip from the "remote".
+    /// Connect ip from the "remote".
     fn connect_ip(self, port: u16) -> String {
         match self {
             Network::Ipv4 => format!("127.0.0.1:{port}"),
@@ -175,7 +174,7 @@ async fn test_mux_connection(
     );
 
     // These bytes should be dropped
-    remote_connection.send("Droppped bytes".as_bytes()).await?;
+    remote_connection.send("Dropped bytes".as_bytes()).await?;
 
     sleep(Duration::from_millis(1)).await;
 

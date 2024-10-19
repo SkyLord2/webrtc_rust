@@ -9,10 +9,8 @@ pub mod soa;
 pub mod srv;
 pub mod txt;
 
-use super::name::*;
-use super::packer::*;
-use super::*;
-use crate::error::*;
+use std::collections::HashMap;
+use std::fmt;
 
 use a::*;
 use aaaa::*;
@@ -25,8 +23,10 @@ use soa::*;
 use srv::*;
 use txt::*;
 
-use std::collections::HashMap;
-use std::fmt;
+use super::name::*;
+use super::packer::*;
+use super::*;
+use crate::error::*;
 
 // EDNS(0) wire constants.
 
@@ -193,7 +193,7 @@ impl ResourceHeader {
 
     // set_edns0 configures h for EDNS(0).
     //
-    // The provided ext_rcode must be an extedned RCode.
+    // The provided ext_rcode must be an extended RCode.
     pub fn set_edns0(
         &mut self,
         udp_payload_len: u16,

@@ -1,16 +1,19 @@
 #[cfg(test)]
 mod transport_layer_cc_test;
 
-use crate::{error::Error, header::*, packet::*, util::*};
-use util::marshal::{Marshal, MarshalSize, Unmarshal};
-
-use bytes::{Buf, BufMut};
 use std::any::Any;
 use std::fmt;
 
+use bytes::{Buf, BufMut};
+use util::marshal::{Marshal, MarshalSize, Unmarshal};
+
+use crate::error::Error;
+use crate::header::*;
+use crate::packet::*;
+use crate::util::*;
+
 type Result<T> = std::result::Result<T, util::Error>;
 
-/// https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#page-5
 /// 0                   1                   2                   3
 /// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -36,21 +39,28 @@ type Result<T> = std::result::Result<T, util::Error>;
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 /// |           recv delta          |  recv delta   | zero padding  |
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
 // for packet status chunk
 /// type of packet status chunk
-#[derive(PartialEq, Eq, Debug, Clone)]
+///
+/// ## Specifications
+///
+/// * [draft-holmer-rmcat-transport-wide-cc-extensions-01, page 5]
+///
+/// [draft-holmer-rmcat-transport-wide-cc-extensions-01, page 5]: https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#page-5
+#[derive(Default, PartialEq, Eq, Debug, Clone)]
 #[repr(u16)]
 pub enum StatusChunkTypeTcc {
+    #[default]
     RunLengthChunk = 0,
     StatusVectorChunk = 1,
 }
 
 /// type of packet status symbol and recv delta
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u16)]
 pub enum SymbolTypeTcc {
     /// https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1.1
+    #[default]
     PacketNotReceived = 0,
     /// https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1.1
     PacketReceivedSmallDelta = 1,
@@ -62,10 +72,11 @@ pub enum SymbolTypeTcc {
 }
 
 /// for status vector chunk
-#[derive(PartialEq, Eq, Debug, Copy, Clone)]
+#[derive(Default, PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u16)]
 pub enum SymbolSizeTypeTcc {
     /// https://tools.ietf.org/html/draft-holmer-rmcat-transport-wide-cc-extensions-01#section-3.1.4
+    #[default]
     OneBit = 0,
     TwoBit = 1,
 }
@@ -79,24 +90,12 @@ impl From<u16> for SymbolSizeTypeTcc {
     }
 }
 
-impl Default for SymbolSizeTypeTcc {
-    fn default() -> Self {
-        SymbolSizeTypeTcc::OneBit
-    }
-}
-
 impl From<u16> for StatusChunkTypeTcc {
     fn from(val: u16) -> Self {
         match val {
             0 => StatusChunkTypeTcc::RunLengthChunk,
             _ => StatusChunkTypeTcc::StatusVectorChunk,
         }
-    }
-}
-
-impl Default for StatusChunkTypeTcc {
-    fn default() -> Self {
-        StatusChunkTypeTcc::RunLengthChunk
     }
 }
 
@@ -108,12 +107,6 @@ impl From<u16> for SymbolTypeTcc {
             2 => SymbolTypeTcc::PacketReceivedLargeDelta,
             _ => SymbolTypeTcc::PacketReceivedWithoutDelta,
         }
-    }
-}
-
-impl Default for SymbolTypeTcc {
-    fn default() -> Self {
-        SymbolTypeTcc::PacketNotReceived
     }
 }
 
@@ -217,7 +210,7 @@ impl Unmarshal for RunLengthChunk {
     }
 }
 
-/// StatusVectorChunk T=typeStatusVecotrChunk
+/// StatusVectorChunk T=typeStatusVectorChunk
 /// 0                   1
 /// 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
 /// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -334,15 +327,15 @@ impl MarshalSize for RecvDelta {
         // small delta
         if self.type_tcc_packet == SymbolTypeTcc::PacketReceivedSmallDelta
             && delta >= 0
-            && delta <= std::u8::MAX as i64
+            && delta <= u8::MAX as i64
         {
             return 1;
         }
 
         // big delta
         if self.type_tcc_packet == SymbolTypeTcc::PacketReceivedLargeDelta
-            && delta >= std::i16::MIN as i64
-            && delta <= std::u16::MAX as i64
+            && delta >= i16::MIN as i64
+            && delta <= i16::MAX as i64
         {
             return 2;
         }
@@ -359,7 +352,7 @@ impl Marshal for RecvDelta {
         // small delta
         if self.type_tcc_packet == SymbolTypeTcc::PacketReceivedSmallDelta
             && delta >= 0
-            && delta <= std::u8::MAX as i64
+            && delta <= u8::MAX as i64
             && buf.remaining_mut() >= 1
         {
             buf.put_u8(delta as u8);
@@ -368,11 +361,11 @@ impl Marshal for RecvDelta {
 
         // big delta
         if self.type_tcc_packet == SymbolTypeTcc::PacketReceivedLargeDelta
-            && delta >= std::i16::MIN as i64
-            && delta <= std::u16::MAX as i64
+            && delta >= i16::MIN as i64
+            && delta <= i16::MAX as i64
             && buf.remaining_mut() >= 2
         {
-            buf.put_u16(delta as u16);
+            buf.put_i16(delta as i16);
             return Ok(2);
         }
 

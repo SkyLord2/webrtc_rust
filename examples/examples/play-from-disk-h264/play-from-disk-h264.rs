@@ -1,10 +1,10 @@
-use anyhow::Result;
-use clap::{AppSettings, Arg, Command};
 use std::fs::File;
-use std::io::BufReader;
-use std::io::Write;
+use std::io::{BufReader, Write};
 use std::path::Path;
 use std::sync::Arc;
+
+use anyhow::Result;
+use clap::{AppSettings, Arg, Command};
 use tokio::sync::Notify;
 use tokio::time::Duration;
 use webrtc::api::interceptor_registry::register_default_interceptors;
@@ -172,7 +172,7 @@ async fn main() -> Result<()> {
             // Open a H264 file and start reading using our H264Reader
             let file = File::open(&video_file_name)?;
             let reader = BufReader::new(file);
-            let mut h264 = H264Reader::new(reader);
+            let mut h264 = H264Reader::new(reader, 1_048_576);
 
             // Wait for connection established
             notify_video.notified().await;

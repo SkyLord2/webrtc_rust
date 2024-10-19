@@ -1,12 +1,13 @@
-use super::*;
-
-use dtls::crypto::{Certificate, CryptoPrivateKey};
-use rcgen::KeyPair;
-use rustls::internal::pemfile::certs;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::PathBuf;
+
+use dtls::crypto::{Certificate, CryptoPrivateKey};
+use rcgen::KeyPair;
+use rustls::pki_types::CertificateDer;
 use thiserror::Error;
+
+use super::*;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum Error {
@@ -101,12 +102,12 @@ pub fn load_key(path: PathBuf) -> Result<CryptoPrivateKey, Error> {
 }
 
 /// load_certificate Load/read certificate(s) from file
-pub fn load_certificate(path: PathBuf) -> Result<Vec<rustls::Certificate>, Error> {
+pub fn load_certificate(path: PathBuf) -> Result<Vec<CertificateDer<'static>>, Error> {
     let f = File::open(path)?;
 
     let mut reader = BufReader::new(f);
-    match certs(&mut reader) {
-        Ok(ders) => Ok(ders),
+    match rustls_pemfile::certs(&mut reader).collect::<Result<Vec<_>, _>>() {
+        Ok(certs) => Ok(certs.into_iter().map(CertificateDer::from).collect()),
         Err(_) => Err(Error::ErrNoCertificateFound),
     }
 }

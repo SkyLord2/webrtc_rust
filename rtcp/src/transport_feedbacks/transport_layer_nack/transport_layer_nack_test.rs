@@ -1,7 +1,8 @@
-use super::*;
+use std::sync::{Arc, Mutex};
+
 use bytes::Bytes;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+
+use super::*;
 
 #[test]
 fn test_transport_layer_nack_unmarshal() {
@@ -200,8 +201,8 @@ fn test_nack_pair() {
     );
 }
 
-#[tokio::test]
-async fn test_nack_pair_range() {
+#[test]
+fn test_nack_pair_range() {
     let n = NackPair {
         packet_id: 42,
         lost_packets: 2,
@@ -209,39 +210,29 @@ async fn test_nack_pair_range() {
 
     let out = Arc::new(Mutex::new(vec![]));
     let out1 = Arc::clone(&out);
-    n.range(Box::new(
-        move |s: u16| -> Pin<Box<dyn Future<Output = bool> + Send + 'static>> {
-            let out2 = Arc::clone(&out1);
-            Box::pin(async move {
-                let mut o = out2.lock().await;
-                o.push(s);
-                true
-            })
-        },
-    ))
-    .await;
+    n.range(move |s: u16| -> bool {
+        let out2 = Arc::clone(&out1);
+        let mut o = out2.lock().unwrap();
+        o.push(s);
+        true
+    });
 
     {
-        let o = out.lock().await;
+        let o = out.lock().unwrap();
         assert_eq!(*o, &[42, 44]);
     }
 
     let out = Arc::new(Mutex::new(vec![]));
     let out1 = Arc::clone(&out);
-    n.range(Box::new(
-        move |s: u16| -> Pin<Box<dyn Future<Output = bool> + Send + 'static>> {
-            let out2 = Arc::clone(&out1);
-            Box::pin(async move {
-                let mut o = out2.lock().await;
-                o.push(s);
-                false
-            })
-        },
-    ))
-    .await;
+    n.range(move |s: u16| -> bool {
+        let out2 = Arc::clone(&out1);
+        let mut o = out2.lock().unwrap();
+        o.push(s);
+        false
+    });
 
     {
-        let o = out.lock().await;
+        let o = out.lock().unwrap();
         assert_eq!(*o, &[42]);
     }
 }

@@ -1,9 +1,9 @@
+use std::io::BufReader;
+use std::iter::Iterator;
+
 use super::*;
 use crate::lexer::END_LINE;
 use crate::util::ATTRIBUTE_KEY;
-
-use std::io::BufReader;
-use std::iter::Iterator;
 
 const EXAMPLE_ATTR_EXTMAP1: &str = "extmap:1 http://example.com/082005/ext.htm#ttime";
 const EXAMPLE_ATTR_EXTMAP2: &str =
@@ -18,7 +18,7 @@ fn test_extmap() -> Result<()> {
     let example_attr_extmap2_line = EXAMPLE_ATTR_EXTMAP2;
     let failing_attr_extmap1_line = format!("{ATTRIBUTE_KEY}{FAILING_ATTR_EXTMAP1}{END_LINE}");
     let failing_attr_extmap2_line = format!("{ATTRIBUTE_KEY}{FAILING_ATTR_EXTMAP2}{END_LINE}");
-    let passingtests = vec![
+    let passingtests = [
         (EXAMPLE_ATTR_EXTMAP1, example_attr_extmap1_line),
         (EXAMPLE_ATTR_EXTMAP2, example_attr_extmap2_line),
     ];

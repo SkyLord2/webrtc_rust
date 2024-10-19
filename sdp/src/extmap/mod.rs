@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod extmap_test;
 
+use std::{fmt, io};
+
+use url::Url;
+
 use super::direction::*;
 use super::error::{Error, Result};
 use crate::description::common::*;
-
-use std::fmt;
-use std::io;
-use url::Url;
 
 /// Default ext values
 pub const DEF_EXT_MAP_VALUE_ABS_SEND_TIME: usize = 1;
@@ -20,6 +20,9 @@ pub const TRANSPORT_CC_URI: &str =
     "http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01";
 pub const SDES_MID_URI: &str = "urn:ietf:params:rtp-hdrext:sdes:mid";
 pub const SDES_RTP_STREAM_ID_URI: &str = "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id";
+pub const SDES_REPAIR_RTP_STREAM_ID_URI: &str =
+    "urn:ietf:params:rtp-hdrext:sdes:repaired-rtp-stream-id";
+
 pub const AUDIO_LEVEL_URI: &str = "urn:ietf:params:rtp-hdrext:ssrc-audio-level";
 pub const VIDEO_ORIENTATION_URI: &str = "urn:3gpp:video-orientation";
 
@@ -34,20 +37,21 @@ pub struct ExtMap {
 
 impl fmt::Display for ExtMap {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut output = format!("{}", self.value);
+        write!(f, "{}", self.value)?;
+
         if self.direction != Direction::Unspecified {
-            output += format!("/{}", self.direction).as_str();
+            write!(f, "/{}", self.direction)?;
         }
 
         if let Some(uri) = &self.uri {
-            output += format!(" {uri}").as_str();
+            write!(f, " {uri}")?;
         }
 
         if let Some(ext_attr) = &self.ext_attr {
-            output += format!(" {ext_attr}").as_str();
+            write!(f, " {ext_attr}")?;
         }
 
-        write!(f, "{output}")
+        Ok(())
     }
 }
 

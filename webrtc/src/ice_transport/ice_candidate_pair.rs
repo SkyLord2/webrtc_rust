@@ -1,8 +1,14 @@
-use crate::ice_transport::ice_candidate::*;
-
 use std::fmt;
 
+use crate::ice_transport::ice_candidate::*;
+
 /// ICECandidatePair represents an ICE Candidate pair
+///
+/// ## Specifications
+///
+/// * [MDN]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCIceCandidatePair
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct RTCIceCandidatePair {
     stats_id: String,

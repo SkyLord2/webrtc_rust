@@ -1,9 +1,11 @@
+use std::io::Cursor;
+
+use regex::Regex;
+
 use super::*;
 use crate::api::media_engine::MIME_TYPE_OPUS;
 use crate::api::APIBuilder;
 use crate::peer_connection::configuration::RTCConfiguration;
-use regex::Regex;
-use std::io::Cursor;
 
 #[tokio::test]
 async fn test_opus_case() -> Result<()> {
@@ -118,6 +120,29 @@ a=fmtp:112 minptime=10; useinbandfec=1
         assert!(result.is_err());
 
         let (opus_codec, _) = m.get_codec_by_payload(112).await?;
+        assert_eq!(opus_codec.capability.mime_type, MIME_TYPE_OPUS);
+    }
+
+    //"Ambiguous Payload Type"
+    {
+        const OPUS_AMBIGUOUS_PAYLOAD: &str = "v=0
+o=- 4596489990601351948 2 IN IP4 127.0.0.1
+s=-
+t=0 0
+m=audio 9 UDP/TLS/RTP/SAVPF 96
+a=rtpmap:96 opus/48000/2
+a=fmtp:96 minptime=10; useinbandfec=1
+";
+
+        let mut m = MediaEngine::default();
+        m.register_default_codecs()?;
+        m.update_from_remote_description(&must_parse(OPUS_AMBIGUOUS_PAYLOAD)?)
+            .await?;
+
+        assert!(!m.negotiated_video.load(Ordering::SeqCst));
+        assert!(m.negotiated_audio.load(Ordering::SeqCst));
+
+        let (opus_codec, _) = m.get_codec_by_payload(96).await?;
         assert_eq!(opus_codec.capability.mime_type, MIME_TYPE_OPUS);
     }
 
@@ -652,7 +677,7 @@ async fn validate(m: &MediaEngine) -> Result<()> {
 
 /// The cloned MediaEngine instance should be able to update negotiated header extensions.
 #[tokio::test]
-async fn test_update_header_extenstion_to_cloned_media_engine() -> Result<()> {
+async fn test_update_header_extension_to_cloned_media_engine() -> Result<()> {
     let mut m = MediaEngine::default();
 
     m.register_codec(
@@ -763,7 +788,7 @@ a=rtpmap:111 opus/48000/2
 
     let params =
         m.get_rtp_parameters_by_kind(RTPCodecType::Video, RTCRtpTransceiverDirection::Sendonly);
-    dbg!(&params);
+    //dbg!(&params);
 
     let orientation = params
         .header_extensions

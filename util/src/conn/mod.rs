@@ -16,9 +16,10 @@ mod conn_test;
 #[cfg(test)]
 mod conn_udp_listener_test;
 
-use async_trait::async_trait;
 use std::net::SocketAddr;
 use std::sync::Arc;
+
+use async_trait::async_trait;
 use tokio::net::ToSocketAddrs;
 
 use crate::error::Result;
@@ -33,6 +34,7 @@ pub trait Conn {
     fn local_addr(&self) -> Result<SocketAddr>;
     fn remote_addr(&self) -> Option<SocketAddr>;
     async fn close(&self) -> Result<()>;
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync);
 }
 
 /// A Listener is a generic network listener for connection-oriented protocols.

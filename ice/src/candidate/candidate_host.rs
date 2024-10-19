@@ -1,8 +1,8 @@
+use portable_atomic::{AtomicU16, AtomicU8};
+
 use super::candidate_base::*;
 use super::*;
 use crate::rand::generate_cand_id;
-
-use std::sync::atomic::{AtomicU16, AtomicU8};
 
 /// The config required to create a new `CandidateHost`.
 #[derive(Default)]

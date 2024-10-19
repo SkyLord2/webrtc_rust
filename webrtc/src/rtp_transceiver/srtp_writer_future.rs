@@ -1,23 +1,24 @@
+use std::sync::atomic::Ordering;
+use std::sync::{Arc, Weak};
+
+use async_trait::async_trait;
+use bytes::Bytes;
+use interceptor::{Attributes, RTCPReader, RTPWriter};
+use portable_atomic::AtomicBool;
+use srtp::session::Session;
+use srtp::stream::Stream;
+use tokio::sync::Mutex;
+use util;
+
 use crate::dtls_transport::RTCDtlsTransport;
 use crate::error::{Error, Result};
 use crate::rtp_transceiver::rtp_sender::RTPSenderInternal;
 use crate::rtp_transceiver::SSRC;
 
-use srtp::session::Session;
-use srtp::stream::Stream;
-
-use async_trait::async_trait;
-use bytes::Bytes;
-use interceptor::{Attributes, RTCPReader, RTPWriter};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Weak};
-use tokio::sync::Mutex;
-use util;
-
 /// `RTP` packet sequence number manager.
 ///
 /// Used to override outgoing `RTP` packets' sequence numbers. On creating it is
-/// unabled and can be enabled before sending data begining. Once data sending
+/// unabled and can be enabled before sending data beginning. Once data sending
 /// began it can not be enabled any more.
 pub(crate) struct SequenceTransformer(util::sync::Mutex<SequenceTransformerInner>);
 
@@ -260,8 +261,15 @@ type IResult<T> = std::result::Result<T, interceptor::Error>;
 
 #[async_trait]
 impl RTCPReader for SrtpWriterFuture {
-    async fn read(&self, buf: &mut [u8], a: &Attributes) -> IResult<(usize, Attributes)> {
-        Ok((self.read(buf).await?, a.clone()))
+    async fn read(
+        &self,
+        buf: &mut [u8],
+        a: &Attributes,
+    ) -> IResult<(Vec<Box<dyn rtcp::packet::Packet + Send + Sync>>, Attributes)> {
+        let read = self.read(buf).await?;
+        let pkt = rtcp::packet::unmarshal(&mut &buf[..read])?;
+
+        Ok((pkt, a.clone()))
     }
 }
 

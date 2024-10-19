@@ -1,14 +1,15 @@
 // Silence warning on `..Default::default()` with no effect:
 #![allow(clippy::needless_update)]
 
-use super::*;
-use crate::mock::mock_stream::MockStream;
-use crate::stream_info::RTPHeaderExtension;
 use rtcp::transport_feedbacks::transport_layer_cc::{
     PacketStatusChunk, RunLengthChunk, StatusChunkTypeTcc, StatusVectorChunk, SymbolSizeTypeTcc,
     SymbolTypeTcc, TransportLayerCc,
 };
 use util::Marshal;
+
+use super::*;
+use crate::mock::mock_stream::MockStream;
+use crate::stream_info::RTPHeaderExtension;
 
 #[tokio::test]
 async fn test_twcc_receiver_interceptor_before_any_packets() -> Result<()> {
@@ -118,7 +119,7 @@ async fn test_twcc_receiver_interceptor_different_delays_between_rtp_packets() -
     )
     .await;
 
-    let delays = vec![0, 10, 100, 200];
+    let delays = [0, 10, 100, 200];
     for (i, d) in delays.iter().enumerate() {
         tokio::time::advance(Duration::from_millis(*d)).await;
 

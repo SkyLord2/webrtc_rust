@@ -1,14 +1,15 @@
-use super::*;
-use crate::error::Error;
-use crate::Buffer;
-
 use core::sync::atomic::Ordering;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::AtomicBool;
+
+use portable_atomic::AtomicBool;
 use tokio::net::UdpSocket;
 use tokio::sync::{mpsc, watch, Mutex};
+
+use super::*;
+use crate::error::Error;
+use crate::Buffer;
 
 const RECEIVE_MTU: usize = 8192;
 const DEFAULT_LISTEN_BACKLOG: usize = 128; // same as Linux default
@@ -289,5 +290,9 @@ impl Conn for UdpConn {
         let mut conns = self.conns.lock().await;
         conns.remove(self.raddr.to_string().as_str());
         Ok(())
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }

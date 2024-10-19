@@ -1,24 +1,21 @@
-use super::*;
+use std::net::{IpAddr, Ipv4Addr};
+use std::str::FromStr;
 
-use crate::{
-    auth::{generate_auth_key, AuthHandler},
-    client::{Client, ClientConfig},
-    error::Result,
-    proto::lifetime::DEFAULT_LIFETIME,
-    relay::{relay_none::*, relay_static::RelayAddressGeneratorStatic},
-    server::{
-        config::{ConnConfig, ServerConfig},
-        Server,
-    },
-};
-
-use std::{
-    net::{IpAddr, Ipv4Addr},
-    str::FromStr,
-};
-use stun::{attributes::ATTR_USERNAME, textattrs::TextAttribute};
+use stun::attributes::ATTR_USERNAME;
+use stun::textattrs::TextAttribute;
 use tokio::net::UdpSocket;
+use tokio::sync::mpsc::Sender;
 use util::vnet::net::*;
+
+use super::*;
+use crate::auth::{generate_auth_key, AuthHandler};
+use crate::client::{Client, ClientConfig};
+use crate::error::Result;
+use crate::proto::lifetime::DEFAULT_LIFETIME;
+use crate::relay::relay_none::*;
+use crate::relay::relay_static::RelayAddressGeneratorStatic;
+use crate::server::config::{ConnConfig, ServerConfig};
+use crate::server::Server;
 
 fn new_test_manager() -> Manager {
     let config = ManagerConfig {
@@ -26,6 +23,7 @@ fn new_test_manager() -> Manager {
             address: "0.0.0.0".to_owned(),
             net: Arc::new(Net::new(None)),
         }),
+        alloc_close_notify: None,
     };
     Manager::new(config)
 }
@@ -75,6 +73,7 @@ async fn test_packet_handler() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
 
@@ -180,6 +179,7 @@ async fn test_create_allocation_duplicate_five_tuple() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
 
@@ -190,6 +190,7 @@ async fn test_create_allocation_duplicate_five_tuple() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await;
     assert!(result.is_err(), "expected error, but got ok");
@@ -215,6 +216,7 @@ async fn test_delete_allocation() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
 
@@ -255,6 +257,7 @@ async fn test_allocation_timeout() -> Result<()> {
                 0,
                 lifetime,
                 TextAttribute::new(ATTR_USERNAME, "user".into()),
+                true,
             )
             .await?;
 
@@ -304,6 +307,7 @@ async fn test_manager_close() -> Result<()> {
             0,
             Duration::from_millis(100),
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
     allocations.push(a1);
@@ -315,6 +319,7 @@ async fn test_manager_close() -> Result<()> {
             0,
             Duration::from_millis(200),
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
     allocations.push(a2);
@@ -352,6 +357,7 @@ async fn test_delete_allocation_by_username() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
     let _ = m
@@ -361,6 +367,7 @@ async fn test_delete_allocation_by_username() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
     let _ = m
@@ -370,6 +377,7 @@ async fn test_delete_allocation_by_username() -> Result<()> {
             0,
             DEFAULT_LIFETIME,
             TextAttribute::new(ATTR_USERNAME, "user2".into()),
+            true,
         )
         .await?;
 
@@ -395,7 +403,9 @@ impl AuthHandler for TestAuthHandler {
     }
 }
 
-async fn create_server() -> Result<(Server, u16)> {
+async fn create_server(
+    alloc_close_notify: Option<Sender<AllocationInfo>>,
+) -> Result<(Server, u16)> {
     let conn = Arc::new(UdpSocket::bind("0.0.0.0:0").await?);
     let server_port = conn.local_addr()?.port();
 
@@ -411,6 +421,7 @@ async fn create_server() -> Result<(Server, u16)> {
         realm: "webrtc.rs".to_owned(),
         auth_handler: Arc::new(TestAuthHandler {}),
         channel_bind_timeout: Duration::from_secs(0),
+        alloc_close_notify,
     })
     .await?;
 
@@ -437,7 +448,7 @@ async fn create_client(username: String, server_port: u16) -> Result<Client> {
 #[cfg(feature = "metrics")]
 #[tokio::test]
 async fn test_get_allocations_info() -> Result<()> {
-    let (server, server_port) = create_server().await?;
+    let (server, server_port) = create_server(None).await?;
 
     let client1 = create_client("user1".to_owned(), server_port).await?;
     client1.listen().await?;
@@ -489,7 +500,7 @@ async fn test_get_allocations_info() -> Result<()> {
 #[cfg(feature = "metrics")]
 #[tokio::test]
 async fn test_get_allocations_info_bytes_count() -> Result<()> {
-    let (server, server_port) = create_server().await?;
+    let (server, server_port) = create_server(None).await?;
 
     let client = create_client("foo".to_owned(), server_port).await?;
 
@@ -555,6 +566,48 @@ async fn test_get_allocations_info_bytes_count() -> Result<()> {
 
     client.close().await?;
     server.close().await?;
+
+    Ok(())
+}
+
+#[cfg(feature = "metrics")]
+#[tokio::test]
+async fn test_alloc_close_notify() -> Result<()> {
+    let (tx, mut rx) = mpsc::channel::<AllocationInfo>(1);
+
+    tokio::spawn(async move {
+        if let Some(alloc) = rx.recv().await {
+            assert_eq!(alloc.relayed_bytes, 50);
+        }
+    });
+
+    let (server, server_port) = create_server(Some(tx)).await?;
+
+    let client = create_client("foo".to_owned(), server_port).await?;
+
+    client.listen().await?;
+
+    assert!(server.get_allocations_info(None).await?.is_empty());
+
+    let conn = client.allocate().await?;
+    let addr = client
+        .send_binding_request_to(format!("127.0.0.1:{server_port}").as_str())
+        .await?;
+
+    assert!(!server.get_allocations_info(None).await?.is_empty());
+
+    for _ in 0..10 {
+        conn.send_to(b"Hello", addr).await?;
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+
+    client.close().await?;
+    server.close().await?;
+
+    tokio::time::sleep(Duration::from_millis(1000)).await;
 
     Ok(())
 }

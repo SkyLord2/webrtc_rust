@@ -1,18 +1,23 @@
+use std::io::{Read, Write};
+
 use super::alert::*;
 use super::application_data::*;
 use super::change_cipher_spec::*;
 use super::handshake::*;
 use crate::error::*;
 
-use std::io::{Read, Write};
-
-// https://tools.ietf.org/html/rfc4346#section-6.2.1
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+/// ## Specifications
+///
+/// * [RFC 4346 §6.2.1]
+///
+/// [RFC 4346 §6.2.1]: https://tools.ietf.org/html/rfc4346#section-6.2.1
+#[derive(Default, Copy, Clone, PartialEq, Eq, Debug)]
 pub enum ContentType {
     ChangeCipherSpec = 20,
     Alert = 21,
     Handshake = 22,
     ApplicationData = 23,
+    #[default]
     Invalid,
 }
 
@@ -25,12 +30,6 @@ impl From<u8> for ContentType {
             23 => ContentType::ApplicationData,
             _ => ContentType::Invalid,
         }
-    }
-}
-
-impl Default for ContentType {
-    fn default() -> Self {
-        ContentType::Invalid
     }
 }
 

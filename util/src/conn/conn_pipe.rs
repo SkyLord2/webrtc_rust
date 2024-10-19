@@ -1,8 +1,9 @@
-use super::*;
-
 use std::io::{Error, ErrorKind};
 use std::str::FromStr;
+
 use tokio::sync::{mpsc, Mutex};
+
+use super::*;
 
 struct Pipe {
     rd_rx: Mutex<mpsc::Receiver<Vec<u8>>>,
@@ -71,5 +72,9 @@ impl Conn for Pipe {
 
     async fn close(&self) -> Result<()> {
         Ok(())
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }

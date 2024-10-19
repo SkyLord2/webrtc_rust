@@ -1,18 +1,13 @@
+use std::fmt;
+
 use crate::error::{Error, Result};
 use crate::peer_connection::sdp::sdp_type::RTCSdpType;
 
-use std::fmt;
-
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub(crate) enum StateChangeOp {
+    #[default]
     SetLocal,
     SetRemote,
-}
-
-impl Default for StateChangeOp {
-    fn default() -> Self {
-        StateChangeOp::SetLocal
-    }
 }
 
 impl fmt::Display for StateChangeOp {
@@ -26,8 +21,17 @@ impl fmt::Display for StateChangeOp {
 }
 
 /// SignalingState indicates the signaling state of the offer/answer process.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/signalingState
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dom-peerconnection-signaling-state
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTCSignalingState {
+    #[default]
     Unspecified = 0,
 
     /// SignalingStateStable indicates there is no offer/answer exchange in
@@ -55,12 +59,6 @@ pub enum RTCSignalingState {
 
     /// SignalingStateClosed indicates The PeerConnection has been closed.
     Closed,
-}
-
-impl Default for RTCSignalingState {
-    fn default() -> Self {
-        RTCSignalingState::Unspecified
-    }
 }
 
 const SIGNALING_STATE_STABLE_STR: &str = "stable";
@@ -166,6 +164,11 @@ pub(crate) fn check_next_signaling_state(
                     }
                     _ => {}
                 }
+            } else if op == StateChangeOp::SetLocal
+                && sdp_type == RTCSdpType::Offer
+                && next == RTCSignalingState::HaveLocalOffer
+            {
+                return Ok(next);
             }
         }
         RTCSignalingState::HaveRemotePranswer => {

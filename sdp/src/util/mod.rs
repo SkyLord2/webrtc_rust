@@ -1,16 +1,17 @@
 #[cfg(test)]
 mod util_test;
 
-use super::error::{Error, Result};
-
 use std::collections::HashMap;
 use std::fmt;
+
+use super::error::{Error, Result};
 
 pub const ATTRIBUTE_KEY: &str = "a=";
 
 /// ConnectionRole indicates which of the end points should initiate the connection establishment
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ConnectionRole {
+    #[default]
     Unspecified,
 
     /// ConnectionRoleActive indicates the endpoint will initiate an outgoing connection.
@@ -24,12 +25,6 @@ pub enum ConnectionRole {
 
     /// ConnectionRoleHoldconn indicates the endpoint does not want the connection to be established for the time being.
     Holdconn,
-}
-
-impl Default for ConnectionRole {
-    fn default() -> Self {
-        ConnectionRole::Unspecified
-    }
 }
 
 const CONNECTION_ROLE_ACTIVE_STR: &str = "active";
@@ -98,14 +93,21 @@ impl fmt::Display for Codec {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} {}/{}/{} ({}) [{}]",
-            self.payload_type,
-            self.name,
-            self.clock_rate,
-            self.encoding_parameters,
-            self.fmtp,
-            self.rtcp_feedback.join(", "),
-        )
+            "{} {}/{}/{} ({}) [",
+            self.payload_type, self.name, self.clock_rate, self.encoding_parameters, self.fmtp,
+        )?;
+
+        let mut first = true;
+        for part in &self.rtcp_feedback {
+            if first {
+                first = false;
+                write!(f, "{part}")?;
+            } else {
+                write!(f, ", {part}")?;
+            }
+        }
+
+        write!(f, "]")
     }
 }
 

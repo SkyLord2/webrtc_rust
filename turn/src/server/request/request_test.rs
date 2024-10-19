@@ -1,12 +1,12 @@
+use std::net::IpAddr;
+use std::str::FromStr;
+
+use tokio::net::UdpSocket;
+use tokio::time::{Duration, Instant};
+use util::vnet::net::*;
+
 use super::*;
 use crate::relay::relay_none::*;
-
-use std::{net::IpAddr, str::FromStr};
-use tokio::{
-    net::UdpSocket,
-    time::{Duration, Instant},
-};
-use util::vnet::net::*;
 
 const STATIC_KEY: &str = "ABC";
 
@@ -67,6 +67,7 @@ async fn test_allocation_lifetime_deletion_zero_lifetime() -> Result<()> {
             address: "0.0.0.0".to_owned(),
             net: Arc::new(Net::new(None)),
         }),
+        alloc_close_notify: None,
     }));
 
     let socket = SocketAddr::new(IpAddr::from_str("127.0.0.1")?, 5000);
@@ -91,6 +92,7 @@ async fn test_allocation_lifetime_deletion_zero_lifetime() -> Result<()> {
             0,
             Duration::from_secs(3600),
             TextAttribute::new(ATTR_USERNAME, "user".into()),
+            true,
         )
         .await?;
     assert!(r

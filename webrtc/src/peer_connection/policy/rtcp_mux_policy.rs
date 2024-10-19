@@ -1,10 +1,18 @@
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 /// RTCPMuxPolicy affects what ICE candidates are gathered to support
 /// non-multiplexed RTCP.
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize)]
+///
+/// ## Specifications
+///
+/// * [W3C]
+///
+/// [W3C]: https://w3c.github.io/webrtc-pc/#rtcrtcpmuxpolicy-enum
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize)]
 pub enum RTCRtcpMuxPolicy {
+    #[default]
     Unspecified = 0,
 
     /// RTCPMuxPolicyNegotiate indicates to gather ICE candidates for both
@@ -19,12 +27,6 @@ pub enum RTCRtcpMuxPolicy {
     /// not capable of rtcp-mux, session negotiation will fail.
     #[serde(rename = "require")]
     Require = 2,
-}
-
-impl Default for RTCRtcpMuxPolicy {
-    fn default() -> Self {
-        RTCRtcpMuxPolicy::Negotiate
-    }
 }
 
 const RTCP_MUX_POLICY_NEGOTIATE_STR: &str = "negotiate";

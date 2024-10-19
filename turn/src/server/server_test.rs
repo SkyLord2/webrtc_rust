@@ -1,16 +1,18 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::str::FromStr;
+
+use tokio::net::UdpSocket;
+use tokio::sync::mpsc;
+use util::vnet::router::Nic;
+use util::vnet::*;
+
 use super::config::*;
 use super::*;
 use crate::auth::generate_auth_key;
 use crate::client::*;
 use crate::error::*;
-use crate::relay::relay_static::*;
-
 use crate::relay::relay_none::RelayAddressGeneratorNone;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::str::FromStr;
-use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
-use util::{vnet::router::Nic, vnet::*};
+use crate::relay::relay_static::*;
 
 struct TestAuthHandler {
     cred_map: HashMap<String, Vec<u8>>,
@@ -58,6 +60,7 @@ async fn test_server_simple() -> Result<()> {
         realm: "webrtc.rs".to_owned(),
         auth_handler: Arc::new(TestAuthHandler::new()),
         channel_bind_timeout: Duration::from_secs(0),
+        alloc_close_notify: None,
     })
     .await?;
 
@@ -192,6 +195,7 @@ async fn build_vnet() -> Result<VNet> {
         realm: "webrtc.rs".to_owned(),
         auth_handler: Arc::new(TestAuthHandler::new()),
         channel_bind_timeout: Duration::from_secs(0),
+        alloc_close_notify: None,
     })
     .await?;
 

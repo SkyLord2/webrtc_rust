@@ -14,35 +14,42 @@ pub mod agent_selector;
 pub mod agent_stats;
 pub mod agent_transport;
 
+use std::collections::HashMap;
+use std::future::Future;
+use std::net::{Ipv4Addr, SocketAddr};
+use std::pin::Pin;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::SystemTime;
+
+use agent_config::*;
+use agent_internal::*;
+use agent_stats::*;
+use mdns::conn::*;
+use portable_atomic::{AtomicU8, AtomicUsize};
+use stun::agent::*;
+use stun::attributes::*;
+use stun::fingerprint::*;
+use stun::integrity::*;
+use stun::message::*;
+use stun::xoraddr::*;
+use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::time::{Duration, Instant};
+use util::vnet::net::*;
+use util::Buffer;
+
+use crate::agent::agent_gather::GatherCandidatesInternalParams;
 use crate::candidate::*;
 use crate::error::*;
 use crate::external_ip_mapper::*;
 use crate::mdns::*;
 use crate::network_type::*;
+use crate::rand::*;
 use crate::state::*;
+use crate::tcp_type::TcpType;
 use crate::udp_mux::UDPMux;
 use crate::udp_network::UDPNetwork;
 use crate::url::*;
-use agent_config::*;
-use agent_internal::*;
-use agent_stats::*;
-
-use mdns::conn::*;
-use std::collections::HashMap;
-use std::net::{Ipv4Addr, SocketAddr};
-use stun::{agent::*, attributes::*, fingerprint::*, integrity::*, message::*, xoraddr::*};
-use util::{vnet::net::*, Buffer};
-
-use crate::agent::agent_gather::GatherCandidatesInternalParams;
-use crate::rand::*;
-use crate::tcp_type::TcpType;
-use std::future::Future;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicU8, AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::time::SystemTime;
-use tokio::sync::{broadcast, mpsc, Mutex};
-use tokio::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub(crate) struct BindingRequest {
@@ -97,6 +104,7 @@ pub struct Agent {
 
     pub(crate) udp_network: UDPNetwork,
     pub(crate) interface_filter: Arc<Option<InterfaceFilterFn>>,
+    pub(crate) include_loopback: bool,
     pub(crate) ip_filter: Arc<Option<IpFilterFn>>,
     pub(crate) mdns_mode: MulticastDnsMode,
     pub(crate) mdns_name: String,
@@ -193,6 +201,7 @@ impl Agent {
             udp_network: config.udp_network,
             internal: Arc::new(ai),
             interface_filter: Arc::clone(&config.interface_filter),
+            include_loopback: config.include_loopback,
             ip_filter: Arc::clone(&config.ip_filter),
             mdns_mode,
             mdns_name,
@@ -458,6 +467,7 @@ impl Agent {
             agent_internal: Arc::clone(&self.internal),
             gathering_state: Arc::clone(&self.gathering_state),
             chan_candidate_tx: Arc::clone(&self.internal.chan_candidate_tx),
+            include_loopback: self.include_loopback,
         };
         tokio::spawn(async move {
             Self::gather_candidates_internal(params).await;

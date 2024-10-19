@@ -4,11 +4,12 @@ mod twcc_test;
 pub mod receiver;
 pub mod sender;
 
+use std::cmp::Ordering;
+
 use rtcp::transport_feedbacks::transport_layer_cc::{
     PacketStatusChunk, RecvDelta, RunLengthChunk, StatusChunkTypeTcc, StatusVectorChunk,
     SymbolSizeTypeTcc, SymbolTypeTcc, TransportLayerCc,
 };
-use std::cmp::Ordering;
 
 #[derive(Default, Debug, PartialEq, Clone)]
 struct PktInfo {
@@ -18,7 +19,7 @@ struct PktInfo {
 
 /// Recorder records incoming RTP packets and their delays and creates
 /// transport wide congestion control feedback reports as specified in
-/// https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01
+/// <https://datatracker.ietf.org/doc/html/draft-holmer-rmcat-transport-wide-cc-extensions-01>
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Recorder {
     received_packets: Vec<PktInfo>,
@@ -132,7 +133,7 @@ impl Feedback {
             self.chunks.push(self.last_chunk.encode());
         }
         self.rtcp.packet_chunks.extend_from_slice(&self.chunks);
-        self.rtcp.recv_deltas = self.deltas.clone();
+        self.rtcp.recv_deltas.clone_from(&self.deltas);
 
         self.rtcp.clone()
     }

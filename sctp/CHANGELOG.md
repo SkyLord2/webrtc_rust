@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* Use the new algorithm in crc crate for better throughput [#569](https://github.com/webrtc-rs/webrtc/pull/569)
+
+## v0.8.0
+
 * Fix 'attempt to add with overflow' panic in dev profile [#393](https://github.com/webrtc-rs/webrtc/pull/393)
 * Limit the bytes in the PendingQueue to avoid packets accumulating there uncontrollably [#367](https://github.com/webrtc-rs/webrtc/pull/367).
 * Improve algorithm used to push to pending queue from O(n*log(n)) to O(log(n)) [#365](https://github.com/webrtc-rs/webrtc/pull/365).
@@ -27,7 +31,7 @@
 
 ## v0.6.1
 
-* Increased min verison of `log` dependency to `0.4.16`. [#250 Fix log at ^0.4.16 to make tests compile](https://github.com/webrtc-rs/webrtc/pull/250) by [@k0nserv](https://github.com/k0nserv).
+* Increased min version of `log` dependency to `0.4.16`. [#250 Fix log at ^0.4.16 to make tests compile](https://github.com/webrtc-rs/webrtc/pull/250) by [@k0nserv](https://github.com/k0nserv).
 * [#245 Fix incorrect chunk type Display for CWR](https://github.com/webrtc-rs/webrtc/pull/245) by [@k0nserv](https://github.com/k0nserv).
 
 ## Prior to 0.6.1

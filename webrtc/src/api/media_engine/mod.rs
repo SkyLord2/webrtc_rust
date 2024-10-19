@@ -1,32 +1,36 @@
 #[cfg(test)]
 mod media_engine_test;
 
+use std::collections::HashMap;
+use std::ops::Range;
+use std::sync::atomic::Ordering;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use portable_atomic::AtomicBool;
+use sdp::description::session::SessionDescription;
+use util::sync::Mutex as SyncMutex;
+
 use crate::error::{Error, Result};
 use crate::peer_connection::sdp::{
     codecs_from_media_description, rtp_extensions_from_media_description,
 };
-use crate::rtp_transceiver::fmtp;
 use crate::rtp_transceiver::rtp_codec::{
     codec_parameters_fuzzy_search, CodecMatch, RTCRtpCodecCapability, RTCRtpCodecParameters,
     RTCRtpHeaderExtensionCapability, RTCRtpHeaderExtensionParameters, RTCRtpParameters,
     RTPCodecType,
 };
 use crate::rtp_transceiver::rtp_transceiver_direction::RTCRtpTransceiverDirection;
-use crate::rtp_transceiver::{PayloadType, RTCPFeedback};
+use crate::rtp_transceiver::{fmtp, PayloadType, RTCPFeedback};
 use crate::stats::stats_collector::StatsCollector;
 use crate::stats::CodecStats;
 use crate::stats::StatsReportType::Codec;
 
-use sdp::description::session::SessionDescription;
-use std::collections::HashMap;
-use std::ops::Range;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
-use util::sync::Mutex as SyncMutex;
-
 /// MIME_TYPE_H264 H264 MIME type.
 /// Note: Matching should be case insensitive.
 pub const MIME_TYPE_H264: &str = "video/H264";
+/// MIME_TYPE_HEVC HEVC MIME type.
+/// Note: Matching should be case insensitive.
+pub const MIME_TYPE_HEVC: &str = "video/HEVC";
 /// MIME_TYPE_OPUS Opus MIME type
 /// Note: Matching should be case insensitive.
 pub const MIME_TYPE_OPUS: &str = "audio/opus";
@@ -274,9 +278,31 @@ impl MediaEngine {
                     sdp_fmtp_line:
                         "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640032"
                             .to_owned(),
-                    rtcp_feedback: video_rtcp_feedback,
+                    rtcp_feedback: video_rtcp_feedback.clone(),
                 },
                 payload_type: 123,
+                ..Default::default()
+            },
+            RTCRtpCodecParameters {
+                capability: RTCRtpCodecCapability {
+                    mime_type: MIME_TYPE_AV1.to_owned(),
+                    clock_rate: 90000,
+                    channels: 0,
+                    sdp_fmtp_line: "profile-id=0".to_owned(),
+                    rtcp_feedback: video_rtcp_feedback.clone(),
+                },
+                payload_type: 41,
+                ..Default::default()
+            },
+            RTCRtpCodecParameters {
+                capability: RTCRtpCodecCapability {
+                    mime_type: MIME_TYPE_HEVC.to_owned(),
+                    clock_rate: 90000,
+                    channels: 0,
+                    sdp_fmtp_line: "".to_owned(),
+                    rtcp_feedback: video_rtcp_feedback,
+                },
+                payload_type: 126,
                 ..Default::default()
             },
             RTCRtpCodecParameters {
@@ -338,11 +364,11 @@ impl MediaEngine {
     }
 
     /// Adds a header extension to the MediaEngine
-    /// To determine the negotiated value use [`get_header_extension_id`] after signaling is complete.
+    /// To determine the negotiated value use [`MediaEngine::get_header_extension_id`] after signaling is complete.
     ///
     /// The `allowed_direction` controls for which transceiver directions the extension matches. If
     /// set to `None` it matches all directions. The `SendRecv` direction would match all transceiver
-    /// directions apart from `Inactive`. Inactive ony matches inactive.
+    /// directions apart from `Inactive`. Inactive only matches inactive.
     pub fn register_header_extension(
         &mut self,
         extension: RTCRtpHeaderExtensionCapability,
@@ -406,7 +432,7 @@ impl MediaEngine {
 
     /// get_header_extension_id returns the negotiated ID for a header extension.
     /// If the Header Extension isn't enabled ok will be false
-    pub(crate) async fn get_header_extension_id(
+    pub async fn get_header_extension_id(
         &self,
         extension: RTCRtpHeaderExtensionCapability,
     ) -> (isize, bool, bool) {
@@ -439,7 +465,7 @@ impl MediaEngine {
         &self,
         payload_type: PayloadType,
     ) -> Result<(RTCRtpCodecParameters, RTPCodecType)> {
-        {
+        if self.negotiated_video.load(Ordering::SeqCst) {
             let negotiated_video_codecs = self.negotiated_video_codecs.lock();
             for codec in &*negotiated_video_codecs {
                 if codec.payload_type == payload_type {
@@ -447,9 +473,23 @@ impl MediaEngine {
                 }
             }
         }
-        {
+        if self.negotiated_audio.load(Ordering::SeqCst) {
             let negotiated_audio_codecs = self.negotiated_audio_codecs.lock();
             for codec in &*negotiated_audio_codecs {
+                if codec.payload_type == payload_type {
+                    return Ok((codec.clone(), RTPCodecType::Audio));
+                }
+            }
+        }
+        if !self.negotiated_video.load(Ordering::SeqCst) {
+            for codec in &self.video_codecs {
+                if codec.payload_type == payload_type {
+                    return Ok((codec.clone(), RTPCodecType::Video));
+                }
+            }
+        }
+        if !self.negotiated_audio.load(Ordering::SeqCst) {
+            for codec in &self.audio_codecs {
                 if codec.payload_type == payload_type {
                     return Ok((codec.clone(), RTPCodecType::Audio));
                 }
@@ -535,7 +575,7 @@ impl MediaEngine {
         typ: RTPCodecType,
     ) -> Result<()> {
         let mut negotiated_header_extensions = self.negotiated_header_extensions.lock();
-        let mut propsed_header_extensions = self.proposed_header_extensions.lock();
+        let mut proposed_header_extensions = self.proposed_header_extensions.lock();
 
         for local_extension in &self.header_extensions {
             if local_extension.uri != extension {
@@ -573,7 +613,7 @@ impl MediaEngine {
             }
 
             // Clear any proposals we had for this id
-            propsed_header_extensions.remove(&id);
+            proposed_header_extensions.remove(&id);
         }
         Ok(())
     }

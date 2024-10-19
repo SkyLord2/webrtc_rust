@@ -1,7 +1,8 @@
-use anyhow::Result;
-use clap::{AppSettings, Arg, Command};
 use std::io::Write;
 use std::sync::Arc;
+
+use anyhow::Result;
+use clap::{AppSettings, Arg, Command};
 use tokio::time::Duration;
 use webrtc::api::interceptor_registry::register_default_interceptors;
 use webrtc::api::media_engine::MediaEngine;
@@ -125,6 +126,11 @@ async fn main() -> Result<()> {
                 let d2 = Arc::clone(&d);
                 let d_label2 = d_label.clone();
                 let d_id2 = d_id;
+                d.on_close(Box::new(move || {
+                    println!("Data channel closed");
+                    Box::pin(async {})
+                }));
+
                 d.on_open(Box::new(move || {
                     println!("Data channel '{d_label2}'-'{d_id2}' open. Random messages will now be sent to any connected DataChannels every 5 seconds");
 

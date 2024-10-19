@@ -1,10 +1,20 @@
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 /// ICEProtocol indicates the transport protocol type that is used in the
 /// ice.URL structure.
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// ## Specifications
+///
+/// * [MDN]
+/// * [W3C]
+///
+/// [MDN]: https://developer.mozilla.org/en-US/docs/Web/API/RTCIceCandidate/protocol
+/// [W3C]: https://w3c.github.io/webrtc-pc/#rtciceprotocol-enum
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RTCIceProtocol {
+    #[default]
     Unspecified,
 
     /// UDP indicates the URL uses a UDP transport.
@@ -14,12 +24,6 @@ pub enum RTCIceProtocol {
     /// TCP indicates the URL uses a TCP transport.
     #[serde(rename = "tcp")]
     Tcp,
-}
-
-impl Default for RTCIceProtocol {
-    fn default() -> Self {
-        RTCIceProtocol::Unspecified
-    }
 }
 
 const ICE_PROTOCOL_UDP_STR: &str = "udp";

@@ -1,6 +1,6 @@
-use super::*;
-
 use tokio::net::UdpSocket;
+
+use super::*;
 
 #[async_trait]
 impl Conn for UdpSocket {
@@ -34,5 +34,9 @@ impl Conn for UdpSocket {
 
     async fn close(&self) -> Result<()> {
         Ok(())
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }

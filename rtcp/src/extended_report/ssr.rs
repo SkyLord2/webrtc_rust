@@ -60,24 +60,19 @@ impl fmt::Display for StatisticsSummaryReportBlock {
 
 /// TTLorHopLimitType encodes values for the ToH field in
 /// a StatisticsSummaryReportBlock
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TTLorHopLimitType {
+    #[default]
     Missing = 0,
     IPv4 = 1,
     IPv6 = 2,
-}
-
-impl Default for TTLorHopLimitType {
-    fn default() -> Self {
-        TTLorHopLimitType::Missing
-    }
 }
 
 impl From<u8> for TTLorHopLimitType {
     fn from(v: u8) -> Self {
         match v {
             1 => TTLorHopLimitType::IPv4,
-            2 => TTLorHopLimitType::IPv4,
+            2 => TTLorHopLimitType::IPv6,
             _ => TTLorHopLimitType::Missing,
         }
     }

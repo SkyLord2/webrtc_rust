@@ -1,18 +1,14 @@
 pub mod info;
 pub mod layout;
 
-use std::{
-    mem::{ManuallyDrop, MaybeUninit},
-    ops::Range,
-};
+use std::mem::{ManuallyDrop, MaybeUninit};
+use std::ops::Range;
 
 use byteorder::ByteOrder;
-use thiserror::Error;
-
 pub use info::BufferInfo;
 pub use layout::BufferLayout;
-
 use layout::{Deinterleaved, Interleaved};
+use thiserror::Error;
 
 pub trait FromBytes<L>: Sized {
     type Error;
@@ -127,7 +123,7 @@ where
             );
 
             // Transmute the vec to the initialized type.
-            unsafe { std::mem::transmute::<_, Vec<T>>(samples) }
+            unsafe { std::mem::transmute::<Vec<MaybeUninit<T>>, Vec<T>>(samples) }
         };
 
         let info = buffer.info.into();
@@ -171,7 +167,7 @@ where
             );
 
             // Everything is initialized. Transmute the vec to the initialized type.
-            unsafe { std::mem::transmute::<_, Vec<T>>(samples) }
+            unsafe { std::mem::transmute::<Vec<MaybeUninit<T>>, Vec<T>>(samples) }
         };
 
         let info = buffer.info.into();

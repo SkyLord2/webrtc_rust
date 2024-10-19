@@ -1,11 +1,11 @@
-use super::track_local_static_rtp::TrackLocalStaticRTP;
-use super::*;
-use crate::error::flatten_errs;
-
-use crate::track::RTP_OUTBOUND_MTU;
 use log::warn;
 use media::Sample;
 use tokio::sync::Mutex;
+
+use super::track_local_static_rtp::TrackLocalStaticRTP;
+use super::*;
+use crate::error::flatten_errs;
+use crate::track::RTP_OUTBOUND_MTU;
 
 #[derive(Debug, Clone)]
 struct TrackLocalStaticSampleInternal {
@@ -24,9 +24,29 @@ pub struct TrackLocalStaticSample {
 }
 
 impl TrackLocalStaticSample {
-    /// returns a TrackLocalStaticSample
+    /// returns a TrackLocalStaticSample without RID
     pub fn new(codec: RTCRtpCodecCapability, id: String, stream_id: String) -> Self {
         let rtp_track = TrackLocalStaticRTP::new(codec, id, stream_id);
+
+        TrackLocalStaticSample {
+            rtp_track,
+            internal: Mutex::new(TrackLocalStaticSampleInternal {
+                packetizer: None,
+                sequencer: None,
+                clock_rate: 0.0f64,
+                did_warn_about_wonky_pause: false,
+            }),
+        }
+    }
+
+    /// returns a TrackLocalStaticSample with RID
+    pub fn new_with_rid(
+        codec: RTCRtpCodecCapability,
+        id: String,
+        rid: String,
+        stream_id: String,
+    ) -> Self {
+        let rtp_track = TrackLocalStaticRTP::new_with_rid(codec, id, rid, stream_id);
 
         TrackLocalStaticSample {
             rtp_track,
@@ -118,7 +138,7 @@ impl TrackLocalStaticSample {
             if sample.prev_dropped_packets > 0 {
                 packetizer.skip_samples(samples * sample.prev_dropped_packets as u32);
             }
-            packetizer.packetize(&sample.data, samples).await?
+            packetizer.packetize(&sample.data, samples)?
         } else {
             vec![]
         };
@@ -221,6 +241,11 @@ impl TrackLocal for TrackLocalStaticSample {
         self.rtp_track.id()
     }
 
+    /// RID is the RTP Stream ID for this track.
+    fn rid(&self) -> Option<&str> {
+        self.rtp_track.rid()
+    }
+
     /// stream_id is the group this track belongs too. This must be unique
     fn stream_id(&self) -> &str {
         self.rtp_track.stream_id()
@@ -237,12 +262,13 @@ impl TrackLocal for TrackLocalStaticSample {
 }
 
 mod sample_writer {
-    use super::TrackLocalStaticSample;
-    use crate::error::Result;
     use media::Sample;
     use rtp::extension::audio_level_extension::AudioLevelExtension;
     use rtp::extension::video_orientation_extension::VideoOrientationExtension;
     use rtp::extension::HeaderExtension;
+
+    use super::TrackLocalStaticSample;
+    use crate::error::Result;
 
     /// Helper for writing Samples via [`TrackLocalStaticSample`] that carry extra RTP data.
     ///

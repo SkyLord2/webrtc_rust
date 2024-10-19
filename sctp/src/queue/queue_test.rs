@@ -1,5 +1,3 @@
-use crate::error::{Error, Result};
-
 use bytes::{Bytes, BytesMut};
 
 ///////////////////////////////////////////////////////////////////
@@ -8,6 +6,7 @@ use bytes::{Bytes, BytesMut};
 use super::payload_queue::*;
 use crate::chunk::chunk_payload_data::{ChunkPayloadData, PayloadProtocolIdentifier};
 use crate::chunk::chunk_selective_ack::GapAckBlock;
+use crate::error::{Error, Result};
 
 fn make_payload(tsn: u32, n_bytes: usize) -> ChunkPayloadData {
     ChunkPayloadData {
@@ -79,7 +78,7 @@ fn test_payload_queue_get_gap_ack_block() -> Result<()> {
     pq.push(make_payload(5, 0), 0);
     pq.push(make_payload(6, 0), 0);
 
-    let gab1 = vec![GapAckBlock { start: 1, end: 6 }];
+    let gab1 = [GapAckBlock { start: 1, end: 6 }];
     let gab2 = pq.get_gap_ack_blocks(0);
     assert!(!gab2.is_empty());
     assert_eq!(gab2.len(), 1);
@@ -90,7 +89,7 @@ fn test_payload_queue_get_gap_ack_block() -> Result<()> {
     pq.push(make_payload(8, 0), 0);
     pq.push(make_payload(9, 0), 0);
 
-    let gab1 = vec![
+    let gab1 = [
         GapAckBlock { start: 1, end: 6 },
         GapAckBlock { start: 8, end: 9 },
     ];
@@ -262,7 +261,7 @@ fn test_pending_base_queue_push_and_pop() -> Result<()> {
 fn test_pending_base_queue_out_of_bounce() -> Result<()> {
     let mut pq = PendingBaseQueue::new();
     assert!(pq.pop_front().is_none(), "should be none");
-    assert!(pq.get(0).is_none(), "should be none");
+    assert!(pq.front().is_none(), "should be none");
 
     pq.push_back(make_data_chunk(0, false, NO_FRAGMENT));
     assert!(pq.get(1).is_none(), "should be none");
@@ -443,9 +442,11 @@ async fn test_pending_queue_append() -> Result<()> {
 ///////////////////////////////////////////////////////////////////
 //reassembly_queue_test
 ///////////////////////////////////////////////////////////////////
-use super::reassembly_queue::*;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+
+use portable_atomic::AtomicUsize;
+
+use super::reassembly_queue::*;
 
 #[test]
 fn test_reassembly_queue_ordered_fragments() -> Result<()> {
@@ -795,7 +796,11 @@ fn test_reassembly_queue_detect_buffer_too_short() -> Result<()> {
     let result = rq.read(&mut buf);
     assert!(result.is_err(), "read() should not succeed");
     if let Err(err) = result {
-        assert_eq!(err, Error::ErrShortBuffer, "read() should not succeed");
+        assert_eq!(
+            err,
+            Error::ErrShortBuffer { size: 8 },
+            "read() should not succeed"
+        );
     }
     assert_eq!(rq.get_num_bytes(), 0, "num bytes mismatch");
 
@@ -803,7 +808,7 @@ fn test_reassembly_queue_detect_buffer_too_short() -> Result<()> {
 }
 
 #[test]
-fn test_reassembly_queue_forward_tsn_for_ordered_framents() -> Result<()> {
+fn test_reassembly_queue_forward_tsn_for_ordered_fragments() -> Result<()> {
     let mut rq = ReassemblyQueue::new(0);
 
     let org_ppi = PayloadProtocolIdentifier::Binary;
@@ -859,7 +864,7 @@ fn test_reassembly_queue_forward_tsn_for_ordered_framents() -> Result<()> {
 }
 
 #[test]
-fn test_reassembly_queue_forward_tsn_for_unordered_framents() -> Result<()> {
+fn test_reassembly_queue_forward_tsn_for_unordered_fragments() -> Result<()> {
     let mut rq = ReassemblyQueue::new(0);
 
     let org_ppi = PayloadProtocolIdentifier::Binary;

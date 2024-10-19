@@ -1,11 +1,13 @@
+use portable_atomic::{AtomicBool, AtomicU64};
+
+use arc_swap::ArcSwapOption;
+use util::sync::Mutex as SyncMutex;
+
 use super::agent_transport::*;
 use super::*;
 use crate::candidate::candidate_base::CandidateBaseConfig;
 use crate::candidate::candidate_peer_reflexive::CandidatePeerReflexiveConfig;
 use crate::util::*;
-use arc_swap::ArcSwapOption;
-use std::sync::atomic::{AtomicBool, AtomicU64};
-use util::sync::Mutex as SyncMutex;
 
 pub type ChanCandidateTx =
     Arc<Mutex<Option<mpsc::Sender<Option<Arc<dyn Candidate + Send + Sync>>>>>>;
@@ -539,7 +541,7 @@ impl AgentInternal {
         {
             let local_candidates = self.local_candidates.lock().await;
             if let Some(cands) = local_candidates.get(&network_type) {
-                local_cands = cands.clone();
+                local_cands.clone_from(cands);
             }
         }
 
@@ -591,7 +593,7 @@ impl AgentInternal {
         {
             let remote_candidates = self.remote_candidates.lock().await;
             if let Some(cands) = remote_candidates.get(&network_type) {
-                remote_cands = cands.clone();
+                remote_cands.clone_from(cands);
             }
         }
 

@@ -1,13 +1,14 @@
+use std::net::IpAddr;
+
+use tokio::net::UdpSocket;
+use tokio::time::Duration;
+use util::vnet::net::*;
+
 use super::*;
 use crate::auth::*;
 use crate::relay::relay_static::*;
-use crate::server::{config::*, *};
-
-use std::net::IpAddr;
-use tokio::net::UdpSocket;
-use tokio::time::Duration;
-
-use util::vnet::net::*;
+use crate::server::config::*;
+use crate::server::*;
 
 async fn create_listening_test_client(rto_in_ms: u16) -> Result<Client> {
     let conn = UdpSocket::bind("0.0.0.0:0").await?;
@@ -150,6 +151,7 @@ async fn test_client_nonce_expiration() -> Result<()> {
         realm: "webrtc.rs".to_owned(),
         auth_handler: Arc::new(TestAuthHandler {}),
         channel_bind_timeout: Duration::from_secs(0),
+        alloc_close_notify: None,
     })
     .await?;
 

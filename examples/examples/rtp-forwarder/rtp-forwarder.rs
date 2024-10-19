@@ -1,8 +1,9 @@
-use anyhow::Result;
-use clap::{AppSettings, Arg, Command};
 use std::collections::HashMap;
 use std::io::Write;
 use std::sync::Arc;
+
+use anyhow::Result;
+use clap::{AppSettings, Arg, Command};
 use tokio::net::UdpSocket;
 use tokio::time::Duration;
 use webrtc::api::interceptor_registry::register_default_interceptors;
@@ -18,7 +19,7 @@ use webrtc::rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndicat
 use webrtc::rtp_transceiver::rtp_codec::{
     RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType,
 };
-use webrtc::util::{Conn, Marshal, Unmarshal};
+use webrtc::util::{Conn, Marshal};
 
 #[derive(Clone)]
 struct UdpConn {
@@ -208,10 +209,8 @@ async fn main() -> Result<()> {
 
         tokio::spawn(async move {
             let mut b = vec![0u8; 1500];
-            while let Ok((n, _)) = track.read(&mut b).await {
-                // Unmarshal the packet and update the PayloadType
-                let mut buf = &b[..n];
-                let mut rtp_packet = webrtc::rtp::packet::Packet::unmarshal(&mut buf)?;
+            while let Ok((mut rtp_packet, _)) = track.read(&mut b).await {
+                // Update the PayloadType
                 rtp_packet.header.payload_type = c.payload_type;
 
                 // Marshal into original buffer with updated PayloadType

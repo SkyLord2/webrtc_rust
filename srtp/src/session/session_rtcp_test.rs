@@ -1,13 +1,13 @@
+use std::sync::Arc;
+
+use bytes::{Bytes, BytesMut};
+use rtcp::payload_feedbacks::*;
+use tokio::sync::{mpsc, Mutex};
+use util::conn::conn_pipe::*;
+
 use super::*;
 use crate::error::Result;
 use crate::protection_profile::*;
-
-use rtcp::payload_feedbacks::*;
-use util::conn::conn_pipe::*;
-
-use bytes::{Bytes, BytesMut};
-use std::sync::Arc;
-use tokio::sync::{mpsc, Mutex};
 
 async fn build_session_srtcp_pair() -> Result<(Session, Session)> {
     let (ua, ub) = pipe();
@@ -153,14 +153,14 @@ fn encrypt_srtcp(
 const PLI_PACKET_SIZE: usize = 8;
 
 async fn get_sender_ssrc(read_stream: &Arc<Stream>) -> Result<u32> {
-    let auth_tag_size = ProtectionProfile::Aes128CmHmacSha1_80.auth_tag_len();
+    let auth_tag_size = ProtectionProfile::Aes128CmHmacSha1_80.rtcp_auth_tag_len();
 
     let mut read_buffer = BytesMut::with_capacity(PLI_PACKET_SIZE + auth_tag_size);
     read_buffer.resize(PLI_PACKET_SIZE + auth_tag_size, 0u8);
 
-    let (n, _) = read_stream.read_rtcp(&mut read_buffer).await?;
-    let mut reader = &read_buffer[0..n];
-    let pli = picture_loss_indication::PictureLossIndication::unmarshal(&mut reader)?;
+    let pkts = read_stream.read_rtcp(&mut read_buffer).await?;
+    let mut bytes = &pkts[0].marshal()?[..];
+    let pli = picture_loss_indication::PictureLossIndication::unmarshal(&mut bytes)?;
 
     Ok(pli.sender_ssrc)
 }

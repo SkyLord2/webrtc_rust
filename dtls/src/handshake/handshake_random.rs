@@ -1,13 +1,17 @@
-use rand::Rng;
-
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::io::{self, Read, Write};
 use std::time::{Duration, SystemTime};
+
+use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use rand::Rng;
 
 pub const RANDOM_BYTES_LENGTH: usize = 28;
 pub const HANDSHAKE_RANDOM_LENGTH: usize = RANDOM_BYTES_LENGTH + 4;
 
-// https://tools.ietf.org/html/rfc4346#section-7.4.1.2
+/// ## Specifications
+///
+/// * [RFC 4346 §7.4.1.2]
+///
+/// [RFC 4346 §7.4.1.2]: https://tools.ietf.org/html/rfc4346#section-7.4.1.2
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HandshakeRandom {
     pub gmt_unix_time: SystemTime,

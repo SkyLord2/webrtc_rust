@@ -1,12 +1,13 @@
 #[cfg(test)]
 mod ogg_reader_test;
 
-use crate::error::{Error, Result};
-use crate::io::ResetFn;
+use std::io::{Cursor, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt};
 use bytes::BytesMut;
-use std::io::{Cursor, Read};
+
+use crate::error::{Error, Result};
+use crate::io::ResetFn;
 
 pub const PAGE_HEADER_TYPE_CONTINUATION_OF_STREAM: u8 = 0x00;
 pub const PAGE_HEADER_TYPE_BEGINNING_OF_STREAM: u8 = 0x02;
@@ -28,7 +29,7 @@ pub struct OggReader<R: Read> {
 
 /// OggHeader is the metadata from the first two pages
 /// in the file (ID and Comment)
-/// https://tools.ietf.org/html/rfc7845.html#section-3
+/// <https://tools.ietf.org/html/rfc7845.html#section-3>
 pub struct OggHeader {
     pub channel_map: u8,
     pub channels: u8,
@@ -40,7 +41,7 @@ pub struct OggHeader {
 
 /// OggPageHeader is the metadata for a Page
 /// Pages are the fundamental unit of multiplexing in an Ogg stream
-/// https://tools.ietf.org/html/rfc7845.html#section-1
+/// <https://tools.ietf.org/html/rfc7845.html#section-1>
 pub struct OggPageHeader {
     pub granule_position: u64,
 

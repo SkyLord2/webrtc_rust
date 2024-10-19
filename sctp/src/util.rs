@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use crc::{Crc, CRC_32_ISCSI};
+use crc::{Crc, Table, CRC_32_ISCSI};
 
 pub(crate) const PADDING_MULTIPLE: usize = 4;
 
@@ -11,7 +11,7 @@ pub(crate) fn get_padding_size(len: usize) -> usize {
 /// We need to use it for the checksum and don't want to allocate/clear each time.
 pub(crate) static FOUR_ZEROES: Bytes = Bytes::from_static(&[0, 0, 0, 0]);
 
-pub(crate) const ISCSI_CRC: Crc<u32> = Crc::<u32>::new(&CRC_32_ISCSI);
+pub(crate) const ISCSI_CRC: Crc<u32, Table<16>> = Crc::<u32, Table<16>>::new(&CRC_32_ISCSI);
 
 /// Fastest way to do a crc32 without allocating.
 pub(crate) fn generate_packet_checksum(raw: &Bytes) -> u32 {
@@ -75,9 +75,8 @@ pub(crate) fn sna16eq(i1: u16, i2: u16) -> bool {
 
 #[cfg(test)]
 mod test {
-    use crate::error::Result;
-
     use super::*;
+    use crate::error::Result;
 
     const DIV: isize = 16;
 
@@ -148,7 +147,7 @@ mod test {
             if let Some(s1sub1) = s1.checked_sub(1) {
                 assert!(
                     !sna32eq(s1, s1sub1),
-                    "s1 == s1-1 hould be false: s1={s1} s1-1={s1sub1}"
+                    "s1 == s1-1 should be false: s1={s1} s1-1={s1sub1}"
                 );
             }
 
@@ -229,7 +228,7 @@ mod test {
             if let Some(s1sub1) = s1.checked_sub(1) {
                 assert!(
                     !sna16eq(s1, s1sub1),
-                    "s1 == s1-1 hould be false: s1={s1} s1-1={s1sub1}"
+                    "s1 == s1-1 should be false: s1={s1} s1-1={s1sub1}"
                 );
             }
 

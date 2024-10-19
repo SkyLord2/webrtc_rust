@@ -1,5 +1,17 @@
+use std::net::Ipv4Addr;
+use std::ops::Sub;
+use std::str::FromStr;
+
+use async_trait::async_trait;
+use stun::message::*;
+use stun::textattrs::Username;
+use util::vnet::*;
+use util::Conn;
+use waitgroup::{WaitGroup, Worker};
+
 use super::agent_vnet_test::*;
 use super::*;
+use crate::agent::agent_transport_test::pipe;
 use crate::candidate::candidate_base::*;
 use crate::candidate::candidate_host::*;
 use crate::candidate::candidate_peer_reflexive::*;
@@ -8,16 +20,6 @@ use crate::candidate::candidate_server_reflexive::*;
 use crate::control::AttrControlling;
 use crate::priority::PriorityAttr;
 use crate::use_candidate::UseCandidateAttr;
-
-use crate::agent::agent_transport_test::pipe;
-use async_trait::async_trait;
-use std::net::Ipv4Addr;
-use std::ops::Sub;
-use std::str::FromStr;
-use stun::message::*;
-use stun::textattrs::Username;
-use util::{vnet::*, Conn};
-use waitgroup::{WaitGroup, Worker};
 
 #[tokio::test]
 async fn test_pair_search() -> Result<()> {
@@ -611,6 +613,10 @@ impl Conn for MockPacketConn {
 
     async fn close(&self) -> std::result::Result<(), util::Error> {
         Ok(())
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }
 
@@ -1906,7 +1912,7 @@ async fn test_agent_restart_both_side() -> Result<()> {
     let _ = a_connected.recv().await;
     let _ = b_connected.recv().await;
 
-    // Assert that we have new candiates each time
+    // Assert that we have new candidates each time
     assert_ne!(
         conn_afirst_candidates,
         generate_candidate_address_strings(agent_a.get_local_candidates().await)
@@ -1928,8 +1934,8 @@ async fn test_get_remote_credentials() -> Result<()> {
 
     let (remote_ufrag, remote_pwd) = {
         let mut ufrag_pwd = a.internal.ufrag_pwd.lock().await;
-        ufrag_pwd.remote_ufrag = "remoteUfrag".to_owned();
-        ufrag_pwd.remote_pwd = "remotePwd".to_owned();
+        "remoteUfrag".clone_into(&mut ufrag_pwd.remote_ufrag);
+        "remotePwd".clone_into(&mut ufrag_pwd.remote_pwd);
         (
             ufrag_pwd.remote_ufrag.to_owned(),
             ufrag_pwd.remote_pwd.to_owned(),

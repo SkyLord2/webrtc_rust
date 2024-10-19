@@ -1,30 +1,33 @@
 #[cfg(test)]
 mod nat_test;
 
+use std::collections::{HashMap, HashSet};
+use std::net::IpAddr;
+use std::ops::Add;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::SystemTime;
+
+use portable_atomic::AtomicU16;
+use tokio::sync::Mutex;
+use tokio::time::Duration;
+
 use crate::error::*;
 use crate::vnet::chunk::Chunk;
 use crate::vnet::net::UDP_STR;
 
-use std::collections::{HashMap, HashSet};
-use std::net::IpAddr;
-use std::ops::Add;
-use std::sync::atomic::{AtomicU16, Ordering};
-use std::sync::Arc;
-use std::time::SystemTime;
-use tokio::sync::Mutex;
-use tokio::time::Duration;
-
 const DEFAULT_NAT_MAPPING_LIFE_TIME: Duration = Duration::from_secs(30);
 
-// EndpointDependencyType defines a type of behavioral dependendency on the
+// EndpointDependencyType defines a type of behavioral dependency on the
 // remote endpoint's IP address or port number. This is used for the two
 // kinds of behaviors:
 //  - Port Mapping behavior
 //  - Filtering behavior
 // See: https://tools.ietf.org/html/rfc4787
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum EndpointDependencyType {
     // EndpointIndependent means the behavior is independent of the endpoint's address or port
+    #[default]
     EndpointIndependent,
     // EndpointAddrDependent means the behavior is dependent on the endpoint's address
     EndpointAddrDependent,
@@ -32,28 +35,17 @@ pub enum EndpointDependencyType {
     EndpointAddrPortDependent,
 }
 
-impl Default for EndpointDependencyType {
-    fn default() -> Self {
-        EndpointDependencyType::EndpointIndependent
-    }
-}
-
 // NATMode defines basic behavior of the NAT
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum NatMode {
     // NATModeNormal means the NAT behaves as a standard NAPT (RFC 2663).
+    #[default]
     Normal,
     // NATModeNAT1To1 exhibits 1:1 DNAT where the external IP address is statically mapped to
     // a specific local IP address with port number is preserved always between them.
     // When this mode is selected, mapping_behavior, filtering_behavior, port_preservation and
     // mapping_life_time of NATType are ignored.
     Nat1To1,
-}
-
-impl Default for NatMode {
-    fn default() -> Self {
-        NatMode::Normal
-    }
 }
 
 // NATType has a set of parameters that define the behavior of NAT.
@@ -121,7 +113,7 @@ impl NetworkAddressTranslator {
             nat_type.mapping_life_time = Duration::from_secs(0);
 
             if config.mapped_ips.is_empty() {
-                return Err(Error::ErrNatRequriesMapping);
+                return Err(Error::ErrNatRequiresMapping);
             }
             if config.mapped_ips.len() != config.local_ips.len() {
                 return Err(Error::ErrMismatchLengthIp);
@@ -242,7 +234,7 @@ impl NetworkAddressTranslator {
                             )),
                         }
                     } else {
-                        return Err(Error::ErrNatRequriesMapping);
+                        return Err(Error::ErrNatRequiresMapping);
                     };
 
                     {
@@ -309,8 +301,7 @@ impl NetworkAddressTranslator {
                     to.set_destination_addr(&format!("{dst_ip}:{dst_port}"))?;
                 } else {
                     return Err(Error::Other(format!(
-                        "drop {} as {:?}",
-                        from,
+                        "drop {from} as {:?}",
                         Error::ErrNoAssociatedLocalAddress
                     )));
                 }
@@ -410,7 +401,7 @@ impl NetworkAddressTranslator {
         }
 
         let outbound_map = self.outbound_map.lock().await;
-        outbound_map.get(o_key).map(Arc::clone)
+        outbound_map.get(o_key).cloned()
     }
 
     // caller must hold the mutex
@@ -449,7 +440,7 @@ impl NetworkAddressTranslator {
         }
 
         let inbound_map = self.inbound_map.lock().await;
-        inbound_map.get(i_key).map(Arc::clone)
+        inbound_map.get(i_key).cloned()
     }
 
     // caller must hold the mutex

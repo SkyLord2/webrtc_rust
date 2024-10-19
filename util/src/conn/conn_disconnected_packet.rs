@@ -1,8 +1,7 @@
-use super::*;
-
 use std::net::Ipv4Addr;
 use std::sync::Arc;
 
+use super::*;
 use crate::sync::RwLock;
 
 /// Since UDP is connectionless, as a server, it doesn't know how to reply
@@ -58,5 +57,9 @@ impl Conn for DisconnectedPacketConn {
 
     async fn close(&self) -> Result<()> {
         self.pconn.close().await
+    }
+
+    fn as_any(&self) -> &(dyn std::any::Any + Send + Sync) {
+        self
     }
 }

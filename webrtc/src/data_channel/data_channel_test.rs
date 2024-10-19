@@ -1,13 +1,15 @@
 // Silence warning on `for i in 0..vec.len() { … }`:
 #![allow(clippy::needless_range_loop)]
 
+use regex::Regex;
+use tokio::sync::mpsc;
+use tokio::time::Duration;
+use waitgroup::WaitGroup;
+
 use super::*;
 use crate::api::media_engine::MediaEngine;
 use crate::api::{APIBuilder, API};
 use crate::data_channel::data_channel_init::RTCDataChannelInit;
-use crate::peer_connection::peer_connection_test::*;
-use crate::peer_connection::RTCPeerConnection;
-
 //use log::LevelFilter;
 //use std::io::Write;
 use crate::dtls_transport::dtls_parameters::DTLSParameters;
@@ -15,17 +17,14 @@ use crate::dtls_transport::RTCDtlsTransport;
 use crate::error::flatten_errs;
 use crate::ice_transport::ice_candidate::RTCIceCandidate;
 use crate::ice_transport::ice_connection_state::RTCIceConnectionState;
-use crate::ice_transport::ice_gatherer::RTCIceGatherOptions;
-use crate::ice_transport::ice_gatherer::RTCIceGatherer;
+use crate::ice_transport::ice_gatherer::{RTCIceGatherOptions, RTCIceGatherer};
 use crate::ice_transport::ice_parameters::RTCIceParameters;
 use crate::ice_transport::ice_role::RTCIceRole;
 use crate::ice_transport::RTCIceTransport;
 use crate::peer_connection::configuration::RTCConfiguration;
+use crate::peer_connection::peer_connection_test::*;
+use crate::peer_connection::RTCPeerConnection;
 use crate::sctp_transport::sctp_transport_capabilities::SCTPTransportCapabilities;
-use regex::Regex;
-use tokio::sync::mpsc;
-use tokio::time::Duration;
-use waitgroup::WaitGroup;
 
 // EXPECTED_LABEL represents the label of the data channel we are trying to test.
 // Some other channels may have been created during initialization (in the Wasm
@@ -378,7 +377,7 @@ async fn test_data_channel_parameters_max_packet_life_time_exchange() -> Result<
     );
     assert_eq!(
         dc.max_packet_lifetime(),
-        max_packet_life_time,
+        Some(max_packet_life_time),
         "should match"
     );
 
@@ -395,7 +394,7 @@ async fn test_data_channel_parameters_max_packet_life_time_exchange() -> Result<
         );
         assert_eq!(
             d.max_packet_lifetime(),
-            max_packet_life_time,
+            Some(max_packet_life_time),
             "should match"
         );
         let done_tx2 = Arc::clone(&done_tx);
@@ -429,7 +428,7 @@ async fn test_data_channel_parameters_max_retransmits_exchange() -> Result<()> {
 
     // Check if parameters are correctly set
     assert!(!dc.ordered(), "Ordered should be set to false");
-    assert_eq!(dc.max_retransmits(), max_retransmits, "should match");
+    assert_eq!(dc.max_retransmits(), Some(max_retransmits), "should match");
 
     let done_tx = Arc::new(Mutex::new(Some(done_tx)));
     answer_pc.on_data_channel(Box::new(move |d: Arc<RTCDataChannel>| {
@@ -441,7 +440,7 @@ async fn test_data_channel_parameters_max_retransmits_exchange() -> Result<()> {
 
         // Check if parameters are correctly set
         assert!(!d.ordered(), "Ordered should be set to false");
-        assert_eq!(max_retransmits, d.max_retransmits(), "should match");
+        assert_eq!(Some(max_retransmits), d.max_retransmits(), "should match");
         let done_tx2 = Arc::clone(&done_tx);
         Box::pin(async move {
             let mut done = done_tx2.lock().await;
@@ -454,6 +453,107 @@ async fn test_data_channel_parameters_max_retransmits_exchange() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test]
+async fn test_data_channel_parameters_unreliable_unordered_exchange() -> Result<()> {
+    let mut m = MediaEngine::default();
+    m.register_default_codecs()?;
+    let api = APIBuilder::new().with_media_engine(m).build();
+
+    let ordered = false;
+    let max_retransmits = Some(0);
+    let max_packet_life_time = None;
+    let options = RTCDataChannelInit {
+        ordered: Some(ordered),
+        max_retransmits,
+        max_packet_life_time,
+        ..Default::default()
+    };
+
+    let (mut offer_pc, mut answer_pc, dc, done_tx, done_rx) =
+        set_up_data_channel_parameters_test(&api, Some(options)).await?;
+
+    // Check if parameters are correctly set
+    assert_eq!(
+        dc.ordered(),
+        ordered,
+        "Ordered should be same value as set in DataChannelInit"
+    );
+    assert_eq!(dc.max_retransmits, max_retransmits, "should match");
+
+    let done_tx = Arc::new(Mutex::new(Some(done_tx)));
+    answer_pc.on_data_channel(Box::new(move |d: Arc<RTCDataChannel>| {
+        if d.label() != EXPECTED_LABEL {
+            return Box::pin(async {});
+        }
+        // Check if parameters are correctly set
+        assert_eq!(
+            d.ordered(),
+            ordered,
+            "Ordered should be same value as set in DataChannelInit"
+        );
+        assert_eq!(d.max_retransmits(), max_retransmits, "should match");
+        let done_tx2 = Arc::clone(&done_tx);
+        Box::pin(async move {
+            let mut done = done_tx2.lock().await;
+            done.take();
+        })
+    }));
+
+    close_reliability_param_test(&mut offer_pc, &mut answer_pc, done_rx).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_data_channel_parameters_reliable_unordered_exchange() -> Result<()> {
+    let mut m = MediaEngine::default();
+    m.register_default_codecs()?;
+    let api = APIBuilder::new().with_media_engine(m).build();
+
+    let ordered = false;
+    let max_retransmits = None;
+    let max_packet_life_time = None;
+    let options = RTCDataChannelInit {
+        ordered: Some(ordered),
+        max_retransmits,
+        max_packet_life_time,
+        ..Default::default()
+    };
+
+    let (mut offer_pc, mut answer_pc, dc, done_tx, done_rx) =
+        set_up_data_channel_parameters_test(&api, Some(options)).await?;
+
+    // Check if parameters are correctly set
+    assert_eq!(
+        dc.ordered(),
+        ordered,
+        "Ordered should be same value as set in DataChannelInit"
+    );
+    assert_eq!(dc.max_retransmits, max_retransmits, "should match");
+
+    let done_tx = Arc::new(Mutex::new(Some(done_tx)));
+    answer_pc.on_data_channel(Box::new(move |d: Arc<RTCDataChannel>| {
+        if d.label() != EXPECTED_LABEL {
+            return Box::pin(async {});
+        }
+        // Check if parameters are correctly set
+        assert_eq!(
+            d.ordered(),
+            ordered,
+            "Ordered should be same value as set in DataChannelInit"
+        );
+        assert_eq!(d.max_retransmits(), max_retransmits, "should match");
+        let done_tx2 = Arc::clone(&done_tx);
+        Box::pin(async move {
+            let mut done = done_tx2.lock().await;
+            done.take();
+        })
+    }));
+
+    close_reliability_param_test(&mut offer_pc, &mut answer_pc, done_rx).await?;
+
+    Ok(())
+}
 #[tokio::test]
 async fn test_data_channel_parameters_protocol_exchange() -> Result<()> {
     let mut m = MediaEngine::default();
@@ -744,7 +844,7 @@ async fn test_data_channel_parameters_go() -> Result<()> {
         // Check if parameters are correctly set
         assert!(dc.ordered(), "Ordered should be set to true");
         assert_eq!(
-            max_packet_life_time,
+            Some(max_packet_life_time),
             dc.max_packet_lifetime(),
             "should match"
         );
@@ -760,7 +860,7 @@ async fn test_data_channel_parameters_go() -> Result<()> {
             // Check if parameters are correctly set
             assert!(d.ordered, "Ordered should be set to true");
             assert_eq!(
-                max_packet_life_time,
+                Some(max_packet_life_time),
                 d.max_packet_lifetime(),
                 "should match"
             );
@@ -873,7 +973,7 @@ async fn test_data_channel_buffered_amount_set_before_open() -> Result<()> {
         Box::pin(async move {
             for _ in 0..10 {
                 assert!(
-                    matches!(dc3.send(&buf).await, Ok(_)),
+                    dc3.send(&buf).await.is_ok(),
                     "Failed to send string on data channel"
                 );
                 assert_eq!(
@@ -974,7 +1074,7 @@ async fn test_data_channel_buffered_amount_set_after_open() -> Result<()> {
 
             for _ in 0..10 {
                 assert!(
-                    matches!(dc3.send(&buf).await, Ok(_)),
+                    dc3.send(&buf).await.is_ok(),
                     "Failed to send string on data channel"
                 );
                 assert_eq!(
@@ -1094,7 +1194,7 @@ async fn test_eof_detach() -> Result<()> {
 
         dc.close().await?;
 
-        log::debug!("Wating for EOF");
+        log::debug!("Waiting for EOF");
         let mut buf = vec![0u8; 256];
         let n = dc.read(&mut buf).await?;
         assert_eq!(0, n, "should be empty");
@@ -1257,8 +1357,8 @@ async fn test_data_channel_non_standard_session_description() -> Result<()> {
     answer_pc.set_local_description(answer).await?;
     let _ = answer_gathering_complete.recv().await;
 
-    let anwser = answer_pc.local_description().await.unwrap();
-    offer_pc.set_remote_description(anwser).await?;
+    let answer = answer_pc.local_description().await.unwrap();
+    offer_pc.set_remote_description(answer).await?;
 
     let _ = on_data_channel_called_rx.recv().await;
 

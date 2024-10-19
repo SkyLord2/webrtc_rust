@@ -1,10 +1,10 @@
-use turn::client::*;
-use turn::Error;
+use std::sync::Arc;
 
 use clap::{App, AppSettings, Arg};
-use std::sync::Arc;
 use tokio::net::UdpSocket;
 use tokio::time::Duration;
+use turn::client::*;
+use turn::Error;
 use util::Conn;
 
 // RUST_LOG=trace cargo run --color=always --package turn --example turn_client_udp -- --host 0.0.0.0 --user user=pass --ping
@@ -104,7 +104,7 @@ async fn main() -> Result<(), Error> {
     // address assigned on the TURN server.
     println!("relayed-address={}", relay_conn.local_addr()?);
 
-    // If you provided `-ping`, perform a ping test agaist the
+    // If you provided `-ping`, perform a ping test against the
     // relayConn we have just allocated.
     if ping {
         do_ping_test(&client, relay_conn).await?;

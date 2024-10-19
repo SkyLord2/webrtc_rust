@@ -1,7 +1,8 @@
-use super::*;
-use crate::error::Result;
 use rtcp::packet::Packet;
 use util::Marshal;
+
+use super::*;
+use crate::error::Result;
 
 #[test]
 fn test_chunk_add() -> Result<()> {
@@ -258,7 +259,7 @@ fn test_feedback() -> Result<()> {
             pkt.packet_chunks
         );
 
-        let expected_deltas = vec![
+        let expected_deltas = [
             RecvDelta {
                 type_tcc_packet: SymbolTypeTcc::PacketReceivedSmallDelta,
                 delta: 0,
@@ -337,7 +338,7 @@ fn test_feedback() -> Result<()> {
             pkt.packet_chunks
         );
 
-        let expected_deltas = vec![
+        let expected_deltas = [
             RecvDelta {
                 type_tcc_packet: SymbolTypeTcc::PacketReceivedSmallDelta,
                 delta: 0,

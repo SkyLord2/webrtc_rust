@@ -1,14 +1,15 @@
 #[cfg(test)]
 mod ogg_writer_test;
 
-use crate::error::Result;
-use crate::io::ogg_reader::*;
-use crate::io::Writer;
+use std::io::{BufWriter, Seek, Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use bytes::Bytes;
 use rtp::packetizer::Depacketizer;
-use std::io::{BufWriter, Seek, Write};
+
+use crate::error::Result;
+use crate::io::ogg_reader::*;
+use crate::io::Writer;
 
 /// OggWriter is used to take RTP packets and write them to an OGG on disk
 pub struct OggWriter<W: Write + Seek> {
@@ -126,8 +127,10 @@ impl<W: Write + Seek> OggWriter<W> {
     ) -> Result<()> {
         self.last_payload_size = payload.len();
         self.last_payload = payload.clone();
+        let n_segments = (self.last_payload_size + 255 - 1) / 255;
 
-        let mut page = Vec::with_capacity(PAGE_HEADER_SIZE + 1 + self.last_payload_size);
+        let mut page =
+            Vec::with_capacity(PAGE_HEADER_SIZE + 1 + self.last_payload_size + n_segments);
         {
             let mut header_writer = BufWriter::new(&mut page);
             header_writer.write_all(PAGE_HEADER_SIGNATURE)?; // page headers starts with 'OggS'//0-3
@@ -137,8 +140,16 @@ impl<W: Write + Seek> OggWriter<W> {
             header_writer.write_u32::<LittleEndian>(self.serial)?; // Bitstream serial number//14-17
             header_writer.write_u32::<LittleEndian>(page_index)?; // Page sequence number//18-21
             header_writer.write_u32::<LittleEndian>(0)?; //Checksum reserve //22-25
-            header_writer.write_u8(1)?; // Number of segments in page, giving always 1 segment //26
-            header_writer.write_u8(self.last_payload_size as u8)?; // Segment Table inserting at 27th position since page header length is 27
+            header_writer.write_u8(n_segments as u8)?; // Number of segments in page //26
+
+            // Filling the segment table with the lacing values.
+            // First (n_segments - 1) values will always be 255.
+            for _ in 0..n_segments - 1 {
+                header_writer.write_u8(255)?;
+            }
+            // The last value will be the remainder.
+            header_writer.write_u8((self.last_payload_size - (n_segments * 255 - 255)) as u8)?;
+
             header_writer.write_all(payload)?; // inserting at 28th since Segment Table(1) + header length(27)
         }
 
@@ -158,7 +169,7 @@ impl<W: Write + Seek> OggWriter<W> {
 impl<W: Write + Seek> Writer for OggWriter<W> {
     /// write_rtp adds a new packet and writes the appropriate headers for it
     fn write_rtp(&mut self, packet: &rtp::packet::Packet) -> Result<()> {
-        let mut opus_packet = rtp::codecs::opus::OpusPacket::default();
+        let mut opus_packet = rtp::codecs::opus::OpusPacket;
         let payload = opus_packet.depacketize(&packet.payload)?;
 
         // Should be equivalent to sample_rate * duration

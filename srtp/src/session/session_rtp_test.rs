@@ -1,13 +1,13 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use bytes::{Bytes, BytesMut};
+use tokio::net::UdpSocket;
+use tokio::sync::{mpsc, Mutex};
+
 use super::*;
 use crate::error::Result;
 use crate::protection_profile::*;
-
-use bytes::{Bytes, BytesMut};
-use std::{collections::HashMap, sync::Arc};
-use tokio::{
-    net::UdpSocket,
-    sync::{mpsc, Mutex},
-};
 
 async fn build_session_srtp_pair() -> Result<(Session, Session)> {
     let ua = UdpSocket::bind("127.0.0.1:0").await?;
@@ -210,17 +210,17 @@ async fn payload_srtp(
     let mut read_buffer = BytesMut::with_capacity(header_size + expected_payload.len());
     read_buffer.resize(header_size + expected_payload.len(), 0u8);
 
-    let (n, hdr) = read_stream.read_rtp(&mut read_buffer).await?;
+    let pkt = read_stream.read_rtp(&mut read_buffer).await?;
 
     assert_eq!(
         expected_payload,
-        &read_buffer[header_size..n],
+        &pkt.payload[..],
         "Sent buffer does not match the one received exp({:?}) actual({:?})",
         expected_payload,
-        &read_buffer[header_size..n]
+        &pkt.payload[..]
     );
 
-    Ok(hdr.sequence_number)
+    Ok(pkt.header.sequence_number)
 }
 
 #[tokio::test]

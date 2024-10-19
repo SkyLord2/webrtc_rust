@@ -1,12 +1,20 @@
-use serde::{Deserialize, Serialize};
 use std::fmt;
+
+use serde::{Deserialize, Serialize};
 
 /// BundlePolicy affects which media tracks are negotiated if the remote
 /// endpoint is not bundle-aware, and what ICE candidates are gathered. If the
 /// remote endpoint is bundle-aware, all media tracks and data channels are
 /// bundled onto the same transport.
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize)]
+///
+/// ## Specifications
+///
+/// * [W3C]
+///
+/// [W3C]: https://w3c.github.io/webrtc-pc/#rtcbundlepolicy-enum
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone, Serialize, Deserialize)]
 pub enum RTCBundlePolicy {
+    #[default]
     Unspecified = 0,
 
     /// BundlePolicyBalanced indicates to gather ICE candidates for each
@@ -27,12 +35,6 @@ pub enum RTCBundlePolicy {
     /// one media track.
     #[serde(rename = "max-bundle")]
     MaxBundle = 3,
-}
-
-impl Default for RTCBundlePolicy {
-    fn default() -> Self {
-        RTCBundlePolicy::Unspecified
-    }
 }
 
 /// This is done this way because of a linter.

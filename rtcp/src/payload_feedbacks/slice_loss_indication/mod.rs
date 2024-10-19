@@ -1,12 +1,16 @@
 #[cfg(test)]
 mod slice_loss_indication_test;
 
-use crate::{error::Error, header::*, packet::*, util::*};
-use util::marshal::{Marshal, MarshalSize, Unmarshal};
-
-use bytes::{Buf, BufMut};
 use std::any::Any;
 use std::fmt;
+
+use bytes::{Buf, BufMut};
+use util::marshal::{Marshal, MarshalSize, Unmarshal};
+
+use crate::error::Error;
+use crate::header::*;
+use crate::packet::*;
+use crate::util::*;
 
 type Result<T> = std::result::Result<T, util::Error>;
 
@@ -93,7 +97,7 @@ impl MarshalSize for SliceLossIndication {
 impl Marshal for SliceLossIndication {
     /// Marshal encodes the SliceLossIndication in binary
     fn marshal_to(&self, mut buf: &mut [u8]) -> Result<usize> {
-        if (self.sli_entries.len() + SLI_LENGTH) as u8 > std::u8::MAX {
+        if (self.sli_entries.len() + SLI_LENGTH) as u8 > u8::MAX {
             return Err(Error::TooManyReports.into());
         }
         if buf.remaining_mut() < self.marshal_size() {

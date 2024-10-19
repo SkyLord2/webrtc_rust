@@ -1,13 +1,14 @@
+use std::fmt;
+
 use super::*;
 use crate::api::media_engine::*;
 use crate::error::{Error, Result};
 use crate::rtp_transceiver::fmtp;
 
-use std::fmt;
-
 /// RTPCodecType determines the type of a codec
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RTPCodecType {
+    #[default]
     Unspecified = 0,
 
     /// RTPCodecTypeAudio indicates this is an audio codec
@@ -15,12 +16,6 @@ pub enum RTPCodecType {
 
     /// RTPCodecTypeVideo indicates this is a video codec
     Video = 2,
-}
-
-impl Default for RTPCodecType {
-    fn default() -> Self {
-        RTPCodecType::Unspecified
-    }
 }
 
 impl From<&str> for RTPCodecType {
@@ -55,7 +50,12 @@ impl fmt::Display for RTPCodecType {
 }
 
 /// RTPCodecCapability provides information about codec capabilities.
-/// <https://w3c.github.io/webrtc-pc/#dictionary-rtcrtpcodeccapability-members>
+///
+/// ## Specifications
+///
+/// * [W3C]
+///
+/// [W3C]: https://w3c.github.io/webrtc-pc/#dictionary-rtcrtpcodeccapability-members
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct RTCRtpCodecCapability {
     pub mime_type: String,
@@ -71,6 +71,8 @@ impl RTCRtpCodecCapability {
         let mime_type = self.mime_type.to_lowercase();
         if mime_type == MIME_TYPE_H264.to_lowercase() {
             Ok(Box::<rtp::codecs::h264::H264Payloader>::default())
+        } else if mime_type == MIME_TYPE_HEVC.to_lowercase() {
+            Ok(Box::<rtp::codecs::h265::HevcPayloader>::default())
         } else if mime_type == MIME_TYPE_VP8.to_lowercase() {
             let mut vp8_payloader = rtp::codecs::vp8::Vp8Payloader::default();
             vp8_payloader.enable_picture_id = true;
@@ -85,6 +87,8 @@ impl RTCRtpCodecCapability {
             || mime_type == MIME_TYPE_TELEPHONE_EVENT.to_lowercase()
         {
             Ok(Box::<rtp::codecs::g7xx::G7xxPayloader>::default())
+        } else if mime_type == MIME_TYPE_AV1.to_lowercase() {
+            Ok(Box::<rtp::codecs::av1::Av1Payloader>::default())
         } else {
             Err(Error::ErrNoPayloaderForCodec)
         }
@@ -125,17 +129,12 @@ pub struct RTCRtpParameters {
     pub codecs: Vec<RTCRtpCodecParameters>,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub(crate) enum CodecMatch {
+    #[default]
     None = 0,
     Partial = 1,
     Exact = 2,
-}
-
-impl Default for CodecMatch {
-    fn default() -> Self {
-        CodecMatch::None
-    }
 }
 
 /// Do a fuzzy find for a codec in the list of codecs
@@ -168,4 +167,32 @@ pub(crate) fn codec_parameters_fuzzy_search(
     }
 
     (RTCRtpCodecParameters::default(), CodecMatch::None)
+}
+
+pub(crate) fn codec_rtx_search(
+    original_codec: &RTCRtpCodecParameters,
+    available_codecs: &[RTCRtpCodecParameters],
+) -> Option<RTCRtpCodecParameters> {
+    // find the rtx codec as defined in RFC4588
+
+    let (mime_kind, _) = original_codec.capability.mime_type.split_once("/")?;
+    let rtx_mime = format!("{mime_kind}/rtx");
+
+    for codec in available_codecs {
+        if codec.capability.mime_type != rtx_mime {
+            continue;
+        }
+
+        let params = fmtp::parse(&codec.capability.mime_type, &codec.capability.sdp_fmtp_line);
+
+        if params
+            .parameter("apt")
+            .and_then(|v| v.parse::<u8>().ok())
+            .is_some_and(|apt| apt == original_codec.payload_type)
+        {
+            return Some(codec.clone());
+        }
+    }
+
+    None
 }
